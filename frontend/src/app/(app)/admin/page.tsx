@@ -10,6 +10,7 @@ import {
   ShieldAlert,
   Star,
   Ticket,
+  UserCheck,
   UserPlus,
   Users,
 } from 'lucide-react'
@@ -34,6 +35,7 @@ interface AdminOverviewStats {
   feedback_pending: number
   feedback_bug_pending: number
   reviews_pending: number
+  memberships_pending: number
 }
 
 const actions = [
@@ -136,6 +138,11 @@ export default function AdminOverviewPage() {
           value={loadingStats ? t('loading') : (stats?.reviews_pending ?? '—')}
           icon={Star}
         />
+        <AdminMetric
+          label="Bekleyen üyelik"
+          value={loadingStats ? t('loading') : (stats?.memberships_pending ?? '—')}
+          icon={UserCheck}
+        />
       </div>
 
       {statsError && (
@@ -229,6 +236,27 @@ export default function AdminOverviewPage() {
       </AdminPanel>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <Link
+          href="/admin/memberships"
+          className="border-fl-border bg-fl-surface hover:border-fl-border-2 group border p-5 transition-colors"
+        >
+          <div className="mb-5 flex items-center justify-between">
+            <UserCheck
+              className="text-fl-muted-2 group-hover:text-fl-fg size-5 transition-colors"
+              aria-hidden="true"
+            />
+            <Ticket
+              className="text-fl-muted-4 group-hover:text-fl-muted-2 size-4 transition-colors"
+              aria-hidden="true"
+            />
+          </div>
+          <p className="text-fl-fg font-mono text-sm tracking-widest uppercase">
+            Üyelik başvuruları
+          </p>
+          <p className="text-fl-muted-2 mt-2 font-mono text-xs leading-relaxed">
+            e-Devlet belgelerini incele, başvuruları onayla veya reddet.
+          </p>
+        </Link>
         {actions.map((action) => {
           const Icon = action.icon
           return (

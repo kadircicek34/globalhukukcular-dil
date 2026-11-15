@@ -8,12 +8,14 @@ import {
   MessageSquareText,
   Settings,
   Star,
+  UserCheck,
   Users,
 } from 'lucide-react'
 
 const items = [
   { href: '/admin', key: 'overview', icon: LayoutDashboard },
   { href: '/admin/users', key: 'users', icon: Users },
+  { href: '/admin/memberships', key: 'memberships', icon: UserCheck, label: 'Üyelikler' },
   { href: '/admin/feedback', key: 'feedback', icon: MessageSquareText },
   { href: '/admin/reviews', key: 'reviews', icon: Star },
   { href: '/admin/system', key: 'system', icon: Settings },
@@ -41,7 +43,7 @@ export function AdminNav() {
             }`}
           >
             <Icon className="size-3.5" aria-hidden="true" />
-            {t(item.key)}
+            {'label' in item ? item.label : t(item.key)}
           </Link>
         )
       })}
