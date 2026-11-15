@@ -25,3 +25,6 @@ dist/
 .coverage.*
 coverage.xml
 htmlcov/
+
+# GH Dil production secrets
+deploy/.env.production

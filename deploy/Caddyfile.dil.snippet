@@ -1,0 +1,22 @@
+# dil.globalhukukcular.com — GH Dil
+# Mevcut /root/Gakademi/deploy/Caddyfile sonuna eklenir.
+# Caddy, gakademi_default ağında çalıştığı için ghdil-frontend alias'ına erişir.
+
+dil.globalhukukcular.com {
+  encode zstd gzip
+
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    Permissions-Policy "geolocation=(), camera=(), microphone=(self)"
+    -Server
+  }
+
+  # Next.js uygulaması kendi CSP/COOP/COEP başlıklarını üretir.
+  # WebSocket (/ws/*) yükseltmeleri Caddy tarafından otomatik iletilir.
+  reverse_proxy ghdil-frontend:3000 {
+    health_uri /
+    health_interval 30s
+  }
+}

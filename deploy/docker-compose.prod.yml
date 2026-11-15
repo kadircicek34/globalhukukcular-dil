@@ -1,0 +1,128 @@
+name: ghdil
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ghdil-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ${DATA_PATH}/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    container_name: ghdil-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - ${DATA_PATH}/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    image: ghdil-backend:latest
+    container_name: ghdil-backend
+    restart: unless-stopped
+    command: >
+      sh -c "cd /tmp && PYTHONPATH=/app alembic -c /app/alembic.ini upgrade head &&
+      cd /app && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-2}"
+    volumes:
+      - ${DATA_PATH}/avatars:/app/avatars
+      - ${DATA_PATH}/audio:/data/audio
+      - ${DATA_PATH}/tts_previews:/app/tts_previews
+      - ${DATA_PATH}/membership_docs:/app/membership_docs
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      COOKIE_SECURE: ${COOKIE_SECURE}
+      APP_BASE_URL: ${APP_BASE_URL}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION}
+      MEMBERSHIP_REQUIRED: ${MEMBERSHIP_REQUIRED}
+      MEMBERSHIP_DOCS_DIR: /app/membership_docs
+      FIRST_USER_IS_ADMIN: ${FIRST_USER_IS_ADMIN}
+      EMAIL_ENABLED: ${EMAIL_ENABLED}
+      CONTACT_EMAIL: ${CONTACT_EMAIL}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM: ${SMTP_FROM}
+      SMTP_TLS: ${SMTP_TLS}
+      SMTP_SSL: ${SMTP_SSL}
+      LLM_PROVIDER: ${LLM_PROVIDER}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL}
+      OLLAMA_MODEL: ${OLLAMA_MODEL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-}
+      TTS_PROVIDER: ${TTS_PROVIDER}
+      TTS_BASE_URL: ${TTS_BASE_URL}
+      TTS_VOICE: ${TTS_VOICE}
+      STT_PROVIDER: ${STT_PROVIDER}
+      STT_BASE_URL: ${STT_BASE_URL}
+      STT_MODEL: ${STT_MODEL}
+      AVAILABLE_TARGET_LANGUAGES: ${AVAILABLE_TARGET_LANGUAGES}
+      UVICORN_WORKERS: ${UVICORN_WORKERS}
+      LOG_LEVEL: ${LOG_LEVEL}
+      STRIPE_ENABLED: "false"
+      DEFAULT_CONVERSATION_DAILY_MINUTES: ${DEFAULT_CONVERSATION_DAILY_MINUTES:-30}
+      DEFAULT_CONVERSATION_WEEKLY_MINUTES: ${DEFAULT_CONVERSATION_WEEKLY_MINUTES:-90}
+      DEFAULT_MONTHLY_TOKENS_LIMIT: ${DEFAULT_MONTHLY_TOKENS_LIMIT:-1000000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_SITE_URL: ${APP_BASE_URL}
+    image: ghdil-frontend:latest
+    container_name: ghdil-frontend
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend:8000
+      NEXT_PUBLIC_SITE_URL: ${APP_BASE_URL}
+      NODE_ENV: production
+    depends_on:
+      - backend
+    networks:
+      internal:
+      proxy:
+        aliases:
+          - ghdil-frontend
+
+networks:
+  internal:
+    name: ghdil_internal
+  proxy:
+    name: gakademi_default
+    external: true

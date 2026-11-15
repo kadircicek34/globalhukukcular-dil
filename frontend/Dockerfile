@@ -3,6 +3,8 @@ WORKDIR /app
 RUN npm install -g npm@11.20.0
 COPY frontend/package.json frontend/package-lock.json ./
 COPY frontend/scripts/ ./scripts/
+ARG NEXT_PUBLIC_SITE_URL=https://dil.globalhukukcular.com
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 RUN npm ci
 
 FROM node:26.13.0-alpine AS builder

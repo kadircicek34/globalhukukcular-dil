@@ -1,0 +1,13 @@
+.git
+.gitignore
+frontend/node_modules
+frontend/.next
+frontend/.env*
+backend/.venv
+backend/.venv314
+backend/__pycache__
+backend/**/__pycache__
+backend/.pytest_cache
+deploy/.env.production
+data
+*.bundle
