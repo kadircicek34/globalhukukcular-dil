@@ -112,7 +112,7 @@ export function PageLoadingPresentation({
         >
           {artwork ? (
             <Image
-              src="/logo.png"
+              src="/ghdil-logo.png"
               alt=""
               width={150}
               height={150}

@@ -54,8 +54,8 @@ function detectLocale(req: NextRequest): Locale {
     }
   }
 
-  // 3. Default to English
-  return 'en'
+  // 3. Default to Turkish
+  return 'tr'
 }
 
 export function middleware(req: NextRequest) {

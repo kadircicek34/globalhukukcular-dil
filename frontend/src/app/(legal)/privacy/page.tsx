@@ -76,15 +76,15 @@ export default function PrivacyPage() {
       <div className="mb-10 flex flex-col items-center">
         <Link href="/">
           <Image
-            src="/logo.png"
-            alt="FreeLingo"
+            src="/ghdil-logo.png"
+            alt="GH Dil"
             width={48}
             height={48}
-            className="mb-3"
+            className="mb-3 rounded-full"
           />
         </Link>
         <p className="text-fl-fg font-code text-xl font-bold tracking-widest uppercase">
-          FreeLingo
+          GH Dil
         </p>
         <p className="text-fl-caption text-fl-muted-2 mt-1 font-mono tracking-widest uppercase">
           {tCommon('tagline')}

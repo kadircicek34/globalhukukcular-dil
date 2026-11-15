@@ -42,7 +42,7 @@ export function LanguageBubbles() {
         aria-hidden={!ready}
         className={`relative flex h-full items-center justify-center transition-opacity duration-300 motion-reduce:transition-none ${ready ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
       >
-        <div className="flex justify-center" role="img" aria-label="FreeLingo">
+        <div className="flex justify-center" role="img" aria-label="GH Dil">
           <LinguAvatar
             animation="saludo"
             loop

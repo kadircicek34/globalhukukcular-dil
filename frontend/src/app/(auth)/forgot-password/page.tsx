@@ -38,14 +38,14 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-sm">
         <div className="mb-10 flex flex-col items-center">
           <Image
-            src="/logo.png"
-            alt="FreeLingo"
+            src="/ghdil-logo.png"
+            alt="GH Dil"
             width={100}
             height={100}
             className="mb-4"
           />
           <h1 className="text-fl-fg font-code text-xl font-bold tracking-widest uppercase">
-            FreeLingo
+            GH Dil
           </h1>
         </div>
 

@@ -256,14 +256,14 @@ export default function OnboardingPage() {
       <div className="w-full max-w-sm">
         <div className="mb-10 flex flex-col items-center">
           <Image
-            src="/logo.png"
-            alt="FreeLingo"
+            src="/ghdil-logo.png"
+            alt="GH Dil"
             width={80}
             height={80}
             className="mb-4"
           />
           <h1 className="text-fl-fg font-code text-xl font-bold tracking-widest uppercase">
-            FreeLingo
+            GH Dil
           </h1>
           <p className="text-fl-caption text-fl-muted-2 mt-1 font-mono tracking-widest uppercase">
             {tCommon('tagline')}

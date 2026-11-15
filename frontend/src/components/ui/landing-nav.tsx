@@ -107,9 +107,15 @@ export function LandingNav({
     <nav className="border-fl-border bg-fl-bg/80 sticky top-0 z-10 border-b backdrop-blur-sm">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
         <div className="flex items-center gap-3">
-          <Image src="/logo.png" alt="FreeLingo" width={28} height={28} />
+          <Image
+            src="/ghdil-logo.png"
+            alt="GH Dil"
+            width={28}
+            height={28}
+            className="rounded-full"
+          />
           <span className="text-fl-fg font-code text-sm font-bold tracking-widest uppercase">
-            FreeLingo
+            GH Dil
           </span>
         </div>
 

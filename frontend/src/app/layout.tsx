@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import {
   Geist,
   Geist_Mono,
@@ -47,25 +47,33 @@ const themeScript = `(function(){try{var t='system';var s=localStorage.getItem('
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'FreeLingo',
-    template: '%s | FreeLingo',
+    default: 'GH Dil | Hukukçular için Yapay Zekâ Destekli Dil Eğitimi',
+    template: '%s | GH Dil',
   },
+  description:
+    'Global Hukukçular Derneği üyelerine özel GH Dil; hukuk odaklı senaryolar, A1–C2 çalışma planı ve yapay zekâ eğitmeni Lingu ile dil eğitimi.',
+  applicationName: 'GH Dil',
   // Public content opts in at its own route; private and account pages stay out.
   robots: { index: false, follow: true },
   authors: [
     {
-      name: 'Arturo Carretero Calvo',
-      url: 'https://www.arturocarreterocalvo.com',
+      name: 'Global Hukukçular Derneği',
+      url: 'https://globalhukukcular.com',
     },
   ],
-  creator: 'Arturo Carretero Calvo',
+  creator: 'Global Hukukçular Derneği',
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
       { url: '/favicon.png', type: 'image/png' },
+      { url: '/ghdil-logo.png', sizes: '384x384', type: 'image/png' },
     ],
     apple: '/apple-touch-icon.png',
   },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#0F1E3D',
 }
 
 export default async function RootLayout({
@@ -87,7 +95,7 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){if(document.cookie.indexOf('LOCALE_DETECTED=')!==-1)return;var m=document.cookie.match(/(^| )NEXT_LOCALE=([^;]+)/);var cl=m?m[2]:null;var bl=(navigator.language||'').split('-')[0].toLowerCase();var s=['es','fr','pt','de','it','pl','nl','ro','ru','tr','sv','da','fi','hr'];document.cookie='LOCALE_DETECTED=1;path=/;max-age=31536000;SameSite=Lax';if(cl==='en'||s.indexOf(cl)!==-1)return;if(bl!=='en'&&s.indexOf(bl)!==-1&&cl!==bl){document.cookie='NEXT_LOCALE='+bl+';path=/;max-age=31536000;SameSite=Lax';location.reload()}})();`,
+            __html: `(function(){if(document.cookie.indexOf('LOCALE_DETECTED=')!==-1)return;var supported=['en','es','fr','pt','de','it','pl','nl','ro','ru','tr','sv','da','fi','hr'];var m=document.cookie.match(/(^| )NEXT_LOCALE=([^;]+)/);var saved=m?m[2]:null;var bl=(navigator.language||'tr').split('-')[0].toLowerCase();document.cookie='LOCALE_DETECTED=1;path=/;max-age=31536000;SameSite=Lax';if(saved&&supported.indexOf(saved)!==-1)return;var target=supported.indexOf(bl)!==-1?bl:'tr';if(saved!==target){document.cookie='NEXT_LOCALE='+target+';path=/;max-age=31536000;SameSite=Lax';location.reload()}})();`,
           }}
         />
         {umami && (
