@@ -37,9 +37,22 @@ docker exec gakademi-caddy-1 caddy reload --config /etc/caddy/Caddyfile
 
 `dil.globalhukukcular.com` A kaydı: `169.58.198.19` (Türkticaret DNS paneli).
 
+## Admin bootstrap
+
+Public başvurunun ilk admin olmasını engellemek için `FIRST_USER_IS_ADMIN=false`
+kullanılır. İlk admin, migrasyonlardan sonra container içinde oluşturulur:
+
+```bash
+docker exec -e PYTHONPATH=/app ghdil-backend \
+  python scripts/create_admin.py \
+  --email kadircicek13@icloud.com \
+  --username kadir --name "Kadir Çiçek" \
+  --password 'GUCLU_SIFRE'
+```
+
 ## Sağlık kontrolü
 
 ```bash
-curl -fsS https://dil.globalhukukcular.com/api/health
+curl -fsS https://dil.globalhukukcular.com/api/config
 curl -fsS https://akademi.globalhukukcular.com/ >/dev/null && echo akademi-ok
 ```

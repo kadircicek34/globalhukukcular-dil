@@ -39,6 +39,7 @@ services:
       - ${DATA_PATH}/avatars:/app/avatars
       - ${DATA_PATH}/audio:/data/audio
       - ${DATA_PATH}/tts_previews:/app/tts_previews
+      - ${DATA_PATH}/membership_docs:/app/membership_docs
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
@@ -73,6 +74,9 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000"]}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+      MEMBERSHIP_REQUIRED: ${MEMBERSHIP_REQUIRED:-true}
+      ALLOW_MEMBERSHIP_APPLICATIONS: ${ALLOW_MEMBERSHIP_APPLICATIONS:-true}
+      MEMBERSHIP_DOCS_DIR: /app/membership_docs
       FIRST_USER_IS_ADMIN: ${FIRST_USER_IS_ADMIN:-true}
       BLOCKED_EMAIL_DOMAINS: ${BLOCKED_EMAIL_DOMAINS:-[]}
       AVAILABLE_TARGET_LANGUAGES: ${AVAILABLE_TARGET_LANGUAGES:-["en-US","en-GB"]}

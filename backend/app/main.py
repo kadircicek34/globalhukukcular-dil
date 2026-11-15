@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from alembic.config import Config
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -129,6 +129,22 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def membership_body_limit(request: Request, call_next):
+    if request.method == "POST" and request.url.path == "/api/auth/apply":
+        raw_length = request.headers.get("content-length")
+        if raw_length:
+            try:
+                if int(raw_length) > 6 * 1024 * 1024:
+                    return JSONResponse(
+                        status_code=413,
+                        content={"detail": "Belge en fazla 5 MB olabilir"},
+                    )
+            except ValueError:
+                return JSONResponse(status_code=400, content={"detail": "Geçersiz istek"})
+    return await call_next(request)
 
 
 @app.middleware("http")

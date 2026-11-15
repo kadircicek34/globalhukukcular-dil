@@ -36,6 +36,7 @@ services:
       sh -c "cd /tmp && PYTHONPATH=/app alembic -c /app/alembic.ini upgrade head && cd /app && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     volumes:
       - ./backend:/app
+      - ${DATA_PATH:-./data}/membership_docs:/app/membership_docs
       - ${DATA_PATH}/avatars:/app/avatars
       - ${DATA_PATH}/audio:/data/audio
       - ${DATA_PATH}/tts_previews:/app/tts_previews
@@ -75,6 +76,9 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000"]}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+      MEMBERSHIP_REQUIRED: ${MEMBERSHIP_REQUIRED:-true}
+      ALLOW_MEMBERSHIP_APPLICATIONS: ${ALLOW_MEMBERSHIP_APPLICATIONS:-true}
+      MEMBERSHIP_DOCS_DIR: /app/membership_docs
       FIRST_USER_IS_ADMIN: ${FIRST_USER_IS_ADMIN:-true}
       BLOCKED_EMAIL_DOMAINS: ${BLOCKED_EMAIL_DOMAINS:-[]}
       AVAILABLE_TARGET_LANGUAGES: ${AVAILABLE_TARGET_LANGUAGES:-["en-US","en-GB"]}

@@ -11,3 +11,6 @@ backend/.pytest_cache
 deploy/.env.production
 data
 *.bundle
+
+backend/membership_docs
+membership_docs

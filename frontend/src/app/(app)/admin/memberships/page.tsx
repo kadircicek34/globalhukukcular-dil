@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   CalendarDays,
   Check,
@@ -92,8 +92,11 @@ export default function AdminMembershipsPage() {
   const [rejectReason, setRejectReason] = useState('')
   const [rejectError, setRejectError] = useState('')
   const [notice, setNotice] = useState('')
+  const requestIdRef = useRef(0)
+  const rejectTextareaRef = useRef<HTMLTextAreaElement | null>(null)
 
   const load = useCallback(async () => {
+    const requestId = ++requestIdRef.current
     setLoading(true)
     setError('')
     try {
@@ -104,12 +107,15 @@ export default function AdminMembershipsPage() {
       if (statusFilter !== 'all') params.set('status', statusFilter)
       if (appliedSearch.trim()) params.set('q', appliedSearch.trim())
       const response = await apiFetch(`/api/admin/memberships?${params.toString()}`)
+      if (requestId !== requestIdRef.current) return
       if (!response.ok) throw new Error('load failed')
       setData((await response.json()) as MembershipListResponse)
     } catch {
-      setError('Üyelik başvuruları yüklenemedi. Lütfen tekrar deneyin.')
+      if (requestId === requestIdRef.current) {
+        setError('Üyelik başvuruları yüklenemedi. Lütfen tekrar deneyin.')
+      }
     } finally {
-      setLoading(false)
+      if (requestId === requestIdRef.current) setLoading(false)
     }
   }, [appliedSearch, page, statusFilter])
 
@@ -122,6 +128,16 @@ export default function AdminMembershipsPage() {
     const timer = window.setTimeout(() => setNotice(''), 4000)
     return () => window.clearTimeout(timer)
   }, [notice])
+
+  useEffect(() => {
+    if (!rejectTarget) return
+    rejectTextareaRef.current?.focus()
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setRejectTarget(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [rejectTarget])
 
   const pendingCount = useMemo(
     () => (data?.items ?? []).filter((item) => item.membership_status === 'pending').length,
@@ -153,6 +169,13 @@ export default function AdminMembershipsPage() {
 
   async function openDocument(item: MembershipApplication) {
     if (!item.document_name) return
+    const tab = window.open('', '_blank')
+    if (tab) {
+      tab.opener = null
+      tab.document.title = 'e-Devlet belgesi yükleniyor…'
+      tab.document.body.innerHTML =
+        '<p style="font-family:sans-serif;padding:24px;color:#0f1e3d">Belge yükleniyor…</p>'
+    }
     setBusyId(item.id)
     setError('')
     try {
@@ -160,9 +183,17 @@ export default function AdminMembershipsPage() {
       if (!response.ok) throw new Error('document failed')
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
-      window.open(url, '_blank', 'noopener,noreferrer')
-      window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+      if (tab) {
+        tab.location.href = url
+        window.setTimeout(() => URL.revokeObjectURL(url), 120_000)
+      } else {
+        URL.revokeObjectURL(url)
+        setError(
+          'Tarayıcı yeni sekmeyi engelledi. Lütfen açılır pencere iznini verip tekrar deneyin.'
+        )
+      }
     } catch {
+      tab?.close()
       setError('Belge açılamadı. Dosya sunucuda bulunamadı veya yetkiniz yok.')
     } finally {
       setBusyId(null)
@@ -255,20 +286,20 @@ export default function AdminMembershipsPage() {
             ))}
           </div>
           <form
-            className="flex gap-2"
+            className="flex flex-wrap gap-2"
             onSubmit={(event) => {
               event.preventDefault()
               setAppliedSearch(search)
               setPage(1)
             }}
           >
-            <div className="relative">
+            <div className="relative w-full min-w-0 sm:w-auto">
               <Search className="text-fl-muted-3 absolute left-3 top-1/2 size-3.5 -translate-y-1/2" />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Ad, e-posta veya okul ara"
-                className="border-fl-border bg-fl-bg text-fl-fg placeholder:text-fl-muted-3 focus:border-fl-accent w-64 rounded-full border py-2 pl-9 pr-3 text-xs outline-none"
+                className="border-fl-border bg-fl-bg text-fl-fg placeholder:text-fl-muted-3 focus:border-fl-accent w-full rounded-full border py-2 pl-9 pr-3 text-xs outline-none sm:w-64"
               />
             </div>
             <button
@@ -443,11 +474,16 @@ export default function AdminMembershipsPage() {
 
       {rejectTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="border-fl-border bg-fl-surface w-full max-w-md rounded-2xl border p-6 shadow-2xl">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reject-membership-title"
+            className="border-fl-border bg-fl-surface w-full max-w-md rounded-2xl border p-6 shadow-2xl"
+          >
             <p className="text-fl-label text-fl-muted-2 font-mono uppercase tracking-widest">
               Başvuruyu reddet
             </p>
-            <h3 className="text-fl-fg mt-1 text-lg font-semibold">
+            <h3 id="reject-membership-title" className="text-fl-fg mt-1 text-lg font-semibold">
               {rejectTarget.display_name}
             </h3>
             <p className="text-fl-muted-2 mt-2 text-xs leading-5">
@@ -455,6 +491,7 @@ export default function AdminMembershipsPage() {
               yeniden değerlendirilebilir.
             </p>
             <textarea
+              ref={rejectTextareaRef}
               value={rejectReason}
               onChange={(event) => setRejectReason(event.target.value)}
               rows={4}
@@ -463,7 +500,7 @@ export default function AdminMembershipsPage() {
               className="border-fl-border bg-fl-bg text-fl-fg placeholder:text-fl-muted-3 focus:border-fl-accent mt-4 w-full resize-none rounded-xl border p-3 text-sm outline-none"
             />
             <div className="mt-1 flex justify-between text-[11px] text-fl-muted-3">
-              <span>{rejectError || 'En az 3 karakter'}</span>
+              <span role={rejectError ? 'alert' : undefined}>{rejectError || 'En az 3 karakter'}</span>
               <span>{rejectReason.length}/500</span>
             </div>
             <div className="mt-5 flex justify-end gap-2">

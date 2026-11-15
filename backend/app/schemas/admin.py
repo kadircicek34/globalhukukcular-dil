@@ -157,6 +157,14 @@ class PaginatedMembershipsResponse(BaseModel):
 class MembershipRejectRequest(BaseModel):
     reason: str = Field(min_length=3, max_length=500)
 
+    @field_validator("reason")
+    @classmethod
+    def validate_reason(cls, v: str) -> str:
+        value = v.strip()
+        if len(value) < 3:
+            raise ValueError("Ret gerekçesi en az 3 karakter olmalıdır")
+        return value
+
 
 class MembershipDecisionResponse(BaseModel):
     status: str

@@ -9,6 +9,7 @@ from redis.asyncio import Redis
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.app_logger import get_logger
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import MAINTENANCE_KEY, get_redis, require_admin
@@ -43,6 +44,7 @@ from app.services.subscription_service import apply_subscription_quotas
 from app.utils.pagination import paginate
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+logger = get_logger(__name__)
 
 
 @router.get("/stats", response_model=AdminOverviewStatsResponse)
@@ -287,6 +289,13 @@ async def approve_membership(
     user.membership_reviewed_by = admin.id
     user.is_verified = True
     await db.commit()
+    if user.email and settings.EMAIL_ENABLED:
+        try:
+            await email_service.send_membership_approved_email(
+                user.email, user.display_name, locale=user.native_language
+            )
+        except Exception:
+            logger.warning("Membership approval email failed for user %s", user.id)
     return MembershipDecisionResponse(status="approved", id=user.id)
 
 
@@ -586,6 +595,7 @@ async def delete_user(
         if cursor == 0:
             break
 
+    membership_service.delete_document(user.e_devlet_document_path)
     await db.delete(user)
     await db.commit()
     return {"detail": "User deleted"}

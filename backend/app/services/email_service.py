@@ -1210,6 +1210,45 @@ async def send_account_deleted_email(to: str, display_name: str, locale: str = "
     await _dispatch(strings["subject"], [to], html)
 
 
+_MEMBERSHIP_APPROVED_I18N = {
+    "tr": {
+        "subject": "GH Dil üyeliğiniz onaylandı",
+        "greeting": "Merhaba {name},",
+        "body": "Global Hukukçular Derneği üyeliğiniz ve GH Dil platformu erişiminiz onaylandı. Artık hukuk odaklı dil eğitiminize başlayabilirsiniz.",
+        "button": "GH Dil'e giriş yap",
+        "footer": "Sorularınız için globalhukukcular.com üzerinden dernekle iletişime geçebilirsiniz.",
+    },
+    "en": {
+        "subject": "Your GH Dil membership has been approved",
+        "greeting": "Hello {name},",
+        "body": "Your Global Lawyers Association membership and GH Dil platform access have been approved. You can now start your law-focused language learning.",
+        "button": "Sign in to GH Dil",
+        "footer": "If you have questions, contact the association at globalhukukcular.com.",
+    },
+}
+
+
+async def send_membership_approved_email(to: str, display_name: str, locale: str = "tr") -> None:
+    """Send a membership approval notice. No-op when email is disabled."""
+    if not settings.EMAIL_ENABLED:
+        return
+    strings = _MEMBERSHIP_APPROVED_I18N.get(locale, _MEMBERSHIP_APPROVED_I18N["tr"])
+    html = _render_template(
+        "membership_approved.html",
+        {
+            "greeting": strings["greeting"].format(name=display_name),
+            "body": strings["body"],
+            "button": strings["button"],
+            "footer": strings["footer"],
+            "subject": strings["subject"],
+            "url": f"{settings.APP_BASE_URL}/login",
+            "base_url": settings.APP_BASE_URL,
+        },
+        locale=locale,
+    )
+    await _dispatch(strings["subject"], [to], html)
+
+
 async def send_feedback_notification(
     entry_type: str,
     title: str,

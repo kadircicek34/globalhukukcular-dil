@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -11,6 +12,7 @@ import {
   UserCheck,
   Users,
 } from 'lucide-react'
+import { apiFetch } from '@/lib/api'
 
 const items = [
   { href: '/admin', key: 'overview', icon: LayoutDashboard },
@@ -24,6 +26,24 @@ const items = [
 export function AdminNav() {
   const pathname = usePathname()
   const t = useTranslations('admin')
+  const [pendingMemberships, setPendingMemberships] = useState<number | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    apiFetch('/api/admin/stats', { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!controller.signal.aborted && data) {
+          setPendingMemberships(
+            typeof data.memberships_pending === 'number'
+              ? data.memberships_pending
+              : null
+          )
+        }
+      })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [])
 
   return (
     <div className="border-fl-border bg-fl-surface flex flex-wrap items-center gap-1 border p-1">
@@ -43,7 +63,19 @@ export function AdminNav() {
             }`}
           >
             <Icon className="size-3.5" aria-hidden="true" />
-            {'label' in item ? item.label : t(item.key)}
+            <span>{'label' in item ? item.label : t(item.key)}</span>
+            {item.key === 'memberships' && pendingMemberships !== null && (
+              <span
+                className={`ml-1 min-w-5 rounded-full px-1.5 py-0.5 text-center font-mono text-[10px] font-bold ${
+                  pendingMemberships > 0
+                    ? 'bg-amber-500 text-amber-950'
+                    : 'bg-fl-bg text-fl-muted-2 border-fl-border border'
+                }`}
+                aria-label={`${pendingMemberships} bekleyen üyelik`}
+              >
+                {pendingMemberships}
+              </span>
+            )}
           </Link>
         )
       })}

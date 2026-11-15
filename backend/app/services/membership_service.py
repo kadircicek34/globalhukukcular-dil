@@ -20,7 +20,11 @@ ALLOWED_DOCUMENT_TYPES = {
 
 def documents_dir() -> Path:
     path = Path(settings.MEMBERSHIP_DOCS_DIR)
-    path.mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    try:
+        path.chmod(0o700)
+    except OSError:
+        pass
     return path
 
 
@@ -54,6 +58,18 @@ def safe_display_name(filename: str | None) -> str:
 
 async def save_e_devlet_document(file: UploadFile) -> tuple[str, str, str]:
     content_type = (file.content_type or "").split(";")[0].strip().lower()
+    original_name = safe_display_name(file.filename)
+    suffix = Path(original_name).suffix.lower()
+    expected_suffixes = {
+        "application/pdf": {".pdf"},
+        "image/jpeg": {".jpg", ".jpeg"},
+        "image/png": {".png"},
+    }
+    if content_type in expected_suffixes and suffix not in expected_suffixes[content_type]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Belge uzantısı dosya türüyle uyuşmuyor",
+        )
     data = await file.read(MAX_DOCUMENT_BYTES + 1)
     if len(data) > MAX_DOCUMENT_BYTES:
         raise HTTPException(
@@ -64,7 +80,11 @@ async def save_e_devlet_document(file: UploadFile) -> tuple[str, str, str]:
     filename = f"{uuid.uuid4().hex}.{ext}"
     destination = documents_dir() / filename
     destination.write_bytes(data)
-    return str(destination), safe_display_name(file.filename), content_type
+    try:
+        destination.chmod(0o600)
+    except OSError:
+        pass
+    return str(destination), original_name, content_type
 
 
 def delete_document(path: str | None) -> None:

@@ -266,6 +266,21 @@ async def conversation_ws(
             )
             await websocket.close(code=1008)
             return
+        if user.membership_status != "approved":
+            logger.warning(
+                "[conversation] User %s membership is %s — closing WS 1008",
+                user_id,
+                user.membership_status,
+            )
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "code": "membership_required",
+                    "message": "Membership approval required.",
+                }
+            )
+            await websocket.close(code=1008)
+            return
 
         # Check maintenance mode
         try:

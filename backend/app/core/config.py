@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     ALLOW_REGISTRATION: bool = True
     # GH Dil: public signup must go through the membership application flow.
     MEMBERSHIP_REQUIRED: bool = True
+    ALLOW_MEMBERSHIP_APPLICATIONS: bool = True
     MEMBERSHIP_DOCS_DIR: str = "/app/membership_docs"
     FIRST_USER_IS_ADMIN: bool = True
     BLOCKED_EMAIL_DOMAINS: list[str] = []

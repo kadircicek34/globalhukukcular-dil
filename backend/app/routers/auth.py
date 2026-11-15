@@ -202,7 +202,7 @@ def _membership_denied_detail(user: User) -> str | None:
 async def apply_for_membership(
     request: Request,
     username: str = Form(..., min_length=3, max_length=50),
-    email: str = Form(...),
+    email: str = Form(..., max_length=255),
     password: str = Form(..., min_length=10, max_length=25),
     display_name: str = Form(..., min_length=2, max_length=100),
     birth_date: date = Form(...),
@@ -216,6 +216,11 @@ async def apply_for_membership(
     native_language: str = Form(default="tr"),
     db: AsyncSession = Depends(get_db),
 ):
+    if not settings.ALLOW_MEMBERSHIP_APPLICATIONS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Membership applications are closed",
+        )
     if not re.fullmatch(r"[\w.-]+", username):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -236,6 +241,29 @@ async def apply_for_membership(
     if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", normalized_email):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Geçerli bir e-posta girin"
+        )
+    email_domain = normalized_email.rsplit("@", 1)[-1]
+    if email_domain in {d.lower() for d in settings.BLOCKED_EMAIL_DOMAINS}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Bu e-posta alan adı kabul edilmiyor",
+        )
+    display_name = display_name.strip()
+    law_school = law_school.strip()
+    phone_value = (phone or "").strip()
+    if len(display_name) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Ad soyad zorunludur"
+        )
+    if len(law_school) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Hukuk fakültesi bilgisi zorunludur",
+        )
+    if phone_value and not (5 <= len(phone_value) <= 30):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Telefon numarası 5-30 karakter olmalıdır",
         )
     if native_language not in SUPPORTED_LANGUAGES:
         raise HTTPException(
@@ -286,7 +314,7 @@ async def apply_for_membership(
         user = User(
             username=username,
             email=normalized_email,
-            display_name=display_name.strip() or username,
+            display_name=display_name or username,
             hashed_password=hash_password(password),
             native_language=native_language,
             target_language="en-GB",
@@ -296,9 +324,9 @@ async def apply_for_membership(
             membership_status="approved" if is_first_user else "pending",
             birth_date=birth_date,
             law_status=law_status,
-            law_school=law_school.strip(),
+            law_school=law_school,
             graduation_year=graduation_year,
-            phone=(phone or "").strip() or None,
+            phone=phone_value or None,
             e_devlet_document_path=stored_path,
             e_devlet_document_name=document_name,
             e_devlet_document_mime=document_mime,
@@ -714,6 +742,7 @@ async def delete_me(
     user_email = current_user.email
     user_display_name = current_user.display_name
     user_locale = current_user.native_language
+    membership_service.delete_document(current_user.e_devlet_document_path)
     await db.delete(current_user)
     await db.commit()
     try:

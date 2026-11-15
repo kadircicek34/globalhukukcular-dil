@@ -224,8 +224,66 @@ async def test_public_register_is_closed_when_membership_required(client, monkey
 
 
 @pytest.mark.asyncio
-async def test_first_applicant_becomes_admin(client, tmp_path, monkeypatch):
+async def test_first_applicant_becomes_admin(client, db_session, tmp_path, monkeypatch):
     first = await apply(client, tmp_path, monkeypatch)
     assert first.status_code == 201
     # A fresh database starts empty; the first application is the bootstrap admin.
     assert first.json()["status"] == "approved"
+    user = (
+        await db_session.execute(select(User).where(User.email == "ayse@example.com"))
+    ).scalar_one()
+    assert user.role == "admin"
+
+
+@pytest.mark.asyncio
+async def test_pending_token_cannot_access_protected_routes(
+    client, db_session, admin_user, tmp_path, monkeypatch
+):
+    from app.core.security import create_access_token
+
+    assert (await apply(client, tmp_path, monkeypatch)).status_code == 201
+    user = (
+        await db_session.execute(select(User).where(User.email == "ayse@example.com"))
+    ).scalar_one()
+    token = create_access_token(user.id, user.role)
+    response = await client.get(
+        "/api/auth/me", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_rejected_member_refresh_is_revoked(
+    client, db_session, admin_user, tmp_path, monkeypatch
+):
+    assert (await apply(client, tmp_path, monkeypatch)).status_code == 201
+    _, admin_headers = admin_user
+    user = (
+        await db_session.execute(select(User).where(User.email == "ayse@example.com"))
+    ).scalar_one()
+    approved = await client.post(
+        f"/api/admin/memberships/{user.id}/approve", headers=admin_headers
+    )
+    assert approved.status_code == 200
+    login = await client.post(
+        "/api/auth/login", json={"email": "ayse@example.com", "password": "Test1234!@"}
+    )
+    assert login.status_code == 200
+    user.membership_status = "rejected"
+    await db_session.commit()
+    refreshed = await client.post("/api/auth/refresh")
+    assert refreshed.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_reject_reason_whitespace_is_rejected(
+    client, admin_user, tmp_path, monkeypatch
+):
+    assert (await apply(client, tmp_path, monkeypatch)).status_code == 201
+    _, admin_headers = admin_user
+    response = await client.post(
+        "/api/admin/memberships/1/reject",
+        headers=admin_headers,
+        json={"reason": "   "},
+    )
+    assert response.status_code == 422

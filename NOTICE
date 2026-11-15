@@ -1,0 +1,16 @@
+# NOTICE
+
+GH Dil — Global Hukukçular Derneği üyelerine özel dil öğrenme platformu.
+
+Bu yazılım, Arturo Carretero Calvo tarafından geliştirilen
+[FreeLingo](https://github.com/artcc/freelingo) projesinden türetilmiştir.
+Orijinal proje AGPL-3.0 lisansı altında yayımlanmaktadır.
+
+GH Dil özelleştirmeleri:
+- Global Hukukçular Derneği kurumsal kimliği ve Türkçe arayüz
+- Üyelik başvurusu, doğum tarihi, hukuk öğrencisi/mezunu durumu
+- e-Devlet belgesi yükleme ve yönetici onay akışı
+- Üyeye özel erişim kapısı ve admin üyelik paneli
+- `dil.globalhukukcular.com` üretim dağıtımı
+
+Orijinal telif hakkı bildirimleri ve lisans metni korunmuştur.

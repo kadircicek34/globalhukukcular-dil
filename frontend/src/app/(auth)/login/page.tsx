@@ -73,7 +73,7 @@ function LoginForm() {
           if (res.status === 403) {
             if (data?.detail === 'Membership pending approval') {
               message =
-                'Üyelik başvurunuz yönetici onayı bekliyor. Onaylandığında e-posta ile bilgilendirileceksiniz.'
+                'Üyelik başvurunuz yönetici onayı bekliyor. Onaylandığında giriş yapabilirsiniz.'
             } else if (data?.detail === 'Membership application rejected') {
               message =
                 'Üyelik başvurunuz reddedildi. Ayrıntı için Global Hukukçular Derneği ile iletişime geçin.'
@@ -176,26 +176,28 @@ function LoginForm() {
 
             <form onSubmit={handleSubmit} noValidate className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-xs font-semibold tracking-wide text-[#0f1e3d]">
+                <label htmlFor="login-email" className="mb-1.5 block text-xs font-semibold tracking-wide text-[#0f1e3d]">
                   {t('email')}
                 </label>
                 <input
-                  type="text"
+                  id="login-email"
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="username"
                   autoCorrect="off"
                   autoCapitalize="none"
                   spellCheck={false}
-                  className="w-full rounded-xl border border-[#0f1e3d]/15 bg-white/80 px-4 py-3 text-sm text-[#0f1e3d] outline-none transition placeholder:text-[#9aa2b1] focus:border-[#c9a24b] focus:ring-2 focus:ring-[#c9a24b]/20"
+                  className="w-full rounded-xl border border-[#0f1e3d]/15 bg-white/80 px-4 py-3 text-sm text-[#0f1e3d] outline-none transition placeholder:text-[#7b8497] focus:border-[#c9a24b] focus:ring-2 focus:ring-[#c9a24b]/20"
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-semibold tracking-wide text-[#0f1e3d]">
+                <label htmlFor="login-password" className="mb-1.5 block text-xs font-semibold tracking-wide text-[#0f1e3d]">
                   {t('password')}
                 </label>
                 <div className="relative">
                   <input
+                    id="login-password"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -203,7 +205,7 @@ function LoginForm() {
                     autoCorrect="off"
                     autoCapitalize="none"
                     spellCheck={false}
-                    className="w-full rounded-xl border border-[#0f1e3d]/15 bg-white/80 px-4 py-3 pr-11 text-sm text-[#0f1e3d] outline-none transition placeholder:text-[#9aa2b1] focus:border-[#c9a24b] focus:ring-2 focus:ring-[#c9a24b]/20"
+                    className="w-full rounded-xl border border-[#0f1e3d]/15 bg-white/80 px-4 py-3 pr-11 text-sm text-[#0f1e3d] outline-none transition placeholder:text-[#7b8497] focus:border-[#c9a24b] focus:ring-2 focus:ring-[#c9a24b]/20"
                   />
                   <button
                     type="button"
@@ -253,7 +255,7 @@ function LoginForm() {
             </div>
           </div>
         </div>
-        <p className="mt-5 text-center text-[11px] text-[#8d97a9]">
+        <p className="mt-5 text-center text-[11px] text-[#6f7b90]">
           <a href="https://globalhukukcular.com" target="_blank" rel="noopener noreferrer" className="transition hover:text-[#c9a24b]">
             globalhukukcular.com
           </a>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import {
   ArrowLeft,
   ArrowRight,
@@ -20,6 +21,7 @@ import {
   UserRound,
 } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
+import { useAuthStore } from '@/store/auth'
 
 const MAX_DOCUMENT_BYTES = 5 * 1024 * 1024
 const ACCEPTED_TYPES = ['application/pdf', 'image/jpeg', 'image/png']
@@ -45,6 +47,7 @@ function formatBytes(bytes: number): string {
 }
 
 export default function RegisterPage() {
+  const [invite, setInvite] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
@@ -64,9 +67,19 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<ApplicationResult | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const errorRef = useRef<HTMLDivElement | null>(null)
   const activeRequest = useRef<AbortController | null>(null)
 
-  useEffect(() => () => activeRequest.current?.abort(), [])
+  useEffect(() => {
+    setInvite(new URLSearchParams(window.location.search).get('invite'))
+    return () => activeRequest.current?.abort()
+  }, [])
+
+  useEffect(() => {
+    if (!error) return
+    errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    errorRef.current?.focus({ preventScroll: true })
+  }, [error])
 
   const chooseDocument = useCallback((file: File | null) => {
     setError('')
@@ -95,8 +108,20 @@ export default function RegisterPage() {
         setError('Ad soyad en az 2 karakter olmalıdır.')
         return
       }
-      if (!/^[a-zA-Z0-9._\s-]{3,50}$/.test(username)) {
-        setError('Kullanıcı adı 3-50 karakter olmalı; yalnızca harf, rakam, nokta, tire ve alt çizgi kullanın.')
+      if (!/^[a-zA-Z0-9._-]{3,50}$/.test(username)) {
+        setError('Kullanıcı adı 3-50 karakter olmalı; boşluk olmadan yalnızca harf, rakam, nokta, tire ve alt çizgi kullanın.')
+        return
+      }
+      if (displayName.trim().length > 100) {
+        setError('Ad soyad en fazla 100 karakter olabilir.')
+        return
+      }
+      if (phone.trim() && (phone.trim().length < 5 || phone.trim().length > 30)) {
+        setError('Telefon numarası 5-30 karakter olmalıdır.')
+        return
+      }
+      if (lawSchool.trim().length > 200) {
+        setError('Hukuk fakültesi bilgisi en fazla 200 karakter olabilir.')
         return
       }
       if (!email.trim()) {
@@ -179,10 +204,27 @@ export default function RegisterPage() {
           } else if (response.status === 400) {
             setError('Belge okunamadı. Geçerli bir PDF, JPEG veya PNG yükleyin.')
           } else if (response.status === 422) {
-            const detail = Array.isArray(data?.detail)
-              ? data.detail[0]?.msg
-              : data?.detail
-            setError(typeof detail === 'string' ? detail : 'Form bilgilerini kontrol edin.')
+            const detail = data?.detail
+            const field = Array.isArray(detail) ? detail[0]?.loc?.at(-1) : null
+            const fieldMessages: Record<string, string> = {
+              display_name: 'Ad soyad geçersiz.',
+              username: 'Kullanıcı adı geçersiz.',
+              email: 'Geçerli bir e-posta adresi girin.',
+              phone: 'Telefon numarası geçersiz.',
+              birth_date: 'Doğum tarihi geçersiz veya yaş koşulunu karşılamıyor.',
+              law_status: 'Hukuk durumu seçin.',
+              law_school: 'Hukuk fakültesi bilgisi geçersiz.',
+              graduation_year: 'Mezuniyet yılı geçersiz.',
+              e_devlet_document: 'e-Devlet belgesi geçersiz.',
+              kvkk_accepted: 'KVKK onayı zorunludur.',
+              terms_accepted: 'Üyelik koşulları onayı zorunludur.',
+            }
+            const explicit = typeof detail === 'string' ? detail : null
+            setError(
+              (field && fieldMessages[String(field)]) ||
+                explicit ||
+                'Form bilgilerini kontrol edin.'
+            )
           } else {
             setError('Başvuru gönderilemedi. Lütfen tekrar deneyin.')
           }
@@ -213,6 +255,8 @@ export default function RegisterPage() {
       username,
     ]
   )
+
+  if (invite) return <InviteApplication invite={invite} />
 
   if (result) {
     return (
@@ -269,7 +313,7 @@ export default function RegisterPage() {
                     Dernek sitesine git
                   </a>
                 </div>
-                <p className="mt-6 text-xs leading-6 text-[#68738a]">
+                <p className="mt-6 text-xs leading-6 text-[#5c6880]">
                   Onay süreci genellikle 1-2 iş günü sürer. Belgeniz yalnızca yetkili dernek
                   yöneticileri tarafından görüntülenir.
                 </p>
@@ -364,7 +408,12 @@ export default function RegisterPage() {
             </div>
 
             {error && (
-              <div role="alert" className="mb-5 rounded-xl border border-[#b42318]/25 bg-[#b42318]/8 px-4 py-3 text-sm leading-6 text-[#8a1c12]">
+              <div
+                ref={errorRef}
+                role="alert"
+                tabIndex={-1}
+                className="mb-5 rounded-xl border border-[#b42318]/25 bg-[#b42318]/8 px-4 py-3 text-sm leading-6 text-[#8a1c12] outline-none"
+              >
                 {error}
               </div>
             )}
@@ -377,16 +426,16 @@ export default function RegisterPage() {
                 </legend>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Ad soyad" required icon={<UserRound className="size-3.5" />}>
-                    <input className={inputClass} value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" placeholder="Adınız ve soyadınız" required />
+                    <input className={inputClass} value={displayName} maxLength={100} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" placeholder="Adınız ve soyadınız" required />
                   </Field>
                   <Field label="Kullanıcı adı" required icon={<UserRound className="size-3.5" />}>
-                    <input className={inputClass} value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" placeholder="ornek.kullanici" required />
+                    <input className={inputClass} value={username} maxLength={50} onChange={(e) => setUsername(e.target.value)} autoComplete="username" placeholder="ornek.kullanici" required />
                   </Field>
                   <Field label="E-posta" required icon={<Mail className="size-3.5" />}>
-                    <input className={inputClass} type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="ornek@eposta.com" required />
+                    <input className={inputClass} type="email" value={email} maxLength={255} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="ornek@eposta.com" required />
                   </Field>
                   <Field label="Telefon" icon={<Phone className="size-3.5" />}>
-                    <input className={inputClass} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" placeholder="+90 5xx xxx xx xx" />
+                    <input className={inputClass} type="tel" value={phone} maxLength={30} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" placeholder="+90 5xx xxx xx xx" />
                   </Field>
                   <Field label="Doğum tarihi" required icon={<CalendarDays className="size-3.5" />}>
                     <input className={inputClass} type="date" value={birthDate} max={minBirthDate()} onChange={(e) => setBirthDate(e.target.value)} required />
@@ -433,7 +482,7 @@ export default function RegisterPage() {
                 </div>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <Field label="Hukuk fakültesi / okul" required icon={<GraduationCap className="size-3.5" />}>
-                    <input className={inputClass} value={lawSchool} onChange={(e) => setLawSchool(e.target.value)} placeholder="Üniversite ve fakülte adı" required />
+                    <input className={inputClass} value={lawSchool} maxLength={200} onChange={(e) => setLawSchool(e.target.value)} placeholder="Üniversite ve fakülte adı" required />
                   </Field>
                   {lawStatus === 'graduate' && (
                     <Field label="Mezuniyet yılı" icon={<CalendarDays className="size-3.5" />}>
@@ -460,7 +509,7 @@ export default function RegisterPage() {
                   <input type="checkbox" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} className="accent-[#0f1e3d]" />
                   Şifreleri göster
                 </label>
-                <p className="mt-1 text-[11px] leading-5 text-[#7b8497]">
+                <p className="mt-1 text-[11px] leading-5 text-[#5c6880]">
                   10-25 karakter, en az bir büyük harf, bir rakam ve bir sembol.
                 </p>
 
@@ -503,12 +552,12 @@ export default function RegisterPage() {
                         <button type="button" onClick={() => inputRef.current?.click()} className="text-sm font-semibold text-[#0f1e3d] underline decoration-[#c9a24b] decoration-2 underline-offset-4">
                           Belge seçin
                         </button>
-                        <p className="text-xs text-[#68738a]">veya bu alana sürükleyip bırakın</p>
-                        <p className="mt-1 text-[11px] text-[#7b8497]">PDF, JPEG veya PNG · en fazla 5 MB</p>
+                        <p className="text-xs text-[#5c6880]">veya bu alana sürükleyip bırakın</p>
+                        <p className="mt-1 text-[11px] text-[#5c6880]">PDF, JPEG veya PNG · en fazla 5 MB</p>
                       </div>
                     )}
                   </div>
-                  <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-5 text-[#68738a]">
+                  <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-5 text-[#5c6880]">
                     <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-[#8a6a24]" />
                     Belgeniz şifreli sunucuda saklanır; yalnızca yetkili dernek yöneticileri
                     üyelik doğrulaması için görüntüleyebilir.
@@ -520,14 +569,14 @@ export default function RegisterPage() {
                 <label className="flex cursor-pointer items-start gap-2.5 text-xs leading-5 text-[#43506a]">
                   <input type="checkbox" checked={kvkkAccepted} onChange={(e) => setKvkkAccepted(e.target.checked)} className="mt-0.5 size-4 accent-[#0f1e3d]" />
                   <span>
-                    <Link href="/privacy" className="font-semibold text-[#0f1e3d] underline decoration-[#c9a24b] underline-offset-2">KVKK aydınlatma metnini</Link>{' '}
+                    <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#0f1e3d] underline decoration-[#c9a24b] underline-offset-2">KVKK aydınlatma metnini</Link>{' '}
                     okudum; kişisel verilerimin üyelik süreci kapsamında işlenmesini onaylıyorum.
                   </span>
                 </label>
                 <label className="flex cursor-pointer items-start gap-2.5 text-xs leading-5 text-[#43506a]">
                   <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} className="mt-0.5 size-4 accent-[#0f1e3d]" />
                   <span>
-                    <Link href="/terms" className="font-semibold text-[#0f1e3d] underline decoration-[#c9a24b] underline-offset-2">Üyelik koşullarını</Link>{' '}
+                    <Link href="/terms" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#0f1e3d] underline decoration-[#c9a24b] underline-offset-2">Üyelik koşullarını</Link>{' '}
                     ve dernek üyelik esaslarını kabul ediyorum.
                   </span>
                 </label>
@@ -542,7 +591,7 @@ export default function RegisterPage() {
                 {loading ? 'Başvuru gönderiliyor…' : 'Üyelik başvurusunu gönder'}
                 {!loading && <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />}
               </button>
-              <p className="text-center text-[11px] leading-5 text-[#7b8497]">
+              <p className="text-center text-[11px] leading-5 text-[#5c6880]">
                 Başvurunuz onaylanana kadar platforma giriş yapılamaz. Sorularınız için{' '}
                 <a href="https://globalhukukcular.com/iletisim" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#0f1e3d] underline underline-offset-2">
                   dernek ile iletişime geçin
@@ -557,7 +606,7 @@ export default function RegisterPage() {
 }
 
 const inputClass =
-  'w-full rounded-xl border border-[#0f1e3d]/15 bg-white/80 px-3.5 py-2.5 text-sm text-[#0f1e3d] outline-none transition placeholder:text-[#9aa2b1] focus:border-[#c9a24b] focus:ring-2 focus:ring-[#c9a24b]/20'
+  'w-full rounded-xl border border-[#0f1e3d]/15 bg-white/80 px-3.5 py-2.5 text-sm text-[#0f1e3d] outline-none transition placeholder:text-[#7b8497] focus:border-[#c9a24b] focus:ring-2 focus:ring-[#c9a24b]/20'
 
 function Field({
   label,
@@ -579,5 +628,205 @@ function Field({
       </span>
       {children}
     </label>
+  )
+}
+
+function InviteApplication({ invite }: { invite: string }) {
+  const router = useRouter()
+  const startSession = useAuthStore((s) => s.startSession)
+  const [displayName, setDisplayName] = useState('')
+  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError('')
+    if (!displayName.trim() || displayName.trim().length < 2) {
+      setError('Ad soyad en az 2 karakter olmalıdır.')
+      return
+    }
+    if (!/^[a-zA-Z0-9._-]{3,50}$/.test(username)) {
+      setError('Kullanıcı adı 3-50 karakter olmalı; boşluk kullanmayın.')
+      return
+    }
+    if (!email.trim()) {
+      setError('E-posta adresi zorunludur.')
+      return
+    }
+    if (password !== confirmPassword) {
+      setError('Şifreler eşleşmiyor.')
+      return
+    }
+    if (!/^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{10,25}$/.test(password)) {
+      setError(
+        'Şifre 10-25 karakter olmalı; en az bir büyük harf, bir rakam ve bir sembol içermelidir.'
+      )
+      return
+    }
+    setLoading(true)
+    try {
+      const response = await apiFetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: username.toLowerCase(),
+          email: email.trim().toLowerCase(),
+          password,
+          display_name: displayName.trim(),
+          native_language: 'tr',
+          invite_token: invite,
+        }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        if (response.status === 403) {
+          setError(
+            data?.detail === 'Invalid or expired invite'
+              ? 'Davet bağlantısı geçersiz veya süresi dolmuş. Dernek yönetiminden yeni davet isteyin.'
+              : 'Kayıt şu anda kapalı.'
+          )
+        } else if (response.status === 409) {
+          setError(
+            data?.detail === 'Username already taken'
+              ? 'Bu kullanıcı adı kullanılıyor.'
+              : 'Bu e-posta adresi kullanılıyor.'
+          )
+        } else {
+          setError('Kayıt tamamlanamadı. Bilgilerinizi kontrol edin.')
+        }
+        return
+      }
+      startSession(data.access_token)
+      router.push('/onboarding')
+    } catch {
+      setError('Bağlantı kurulamadı. Lütfen tekrar deneyin.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#081226] px-4 py-10">
+      <div className="pointer-events-none absolute inset-0 opacity-50 [background-image:radial-gradient(circle_at_20%_10%,rgba(201,162,75,0.18),transparent_30%),radial-gradient(circle_at_85%_80%,rgba(54,91,145,0.25),transparent_35%)]" />
+      <div className="relative w-full max-w-lg">
+        <Link href="/" className="mb-6 flex items-center justify-center gap-3 text-[#f7f3ea]">
+          <Image
+            src="/ghdil-logo.png"
+            alt="GH Dil"
+            width={64}
+            height={64}
+            className="rounded-full ring-1 ring-[#c9a24b]/60"
+          />
+          <span>
+            <span className="block font-serif text-xl tracking-[0.18em]">GH DİL</span>
+            <span className="block text-[10px] tracking-[0.16em] text-[#c9a24b] uppercase">
+              Davetli üye kaydı
+            </span>
+          </span>
+        </Link>
+        <section className="overflow-hidden rounded-[1.75rem] border border-[#c9a24b]/40 bg-[#f7f3ea] text-[#0f1e3d] shadow-2xl">
+          <div className="h-1 w-full bg-gradient-to-r from-[#c9a24b] via-[#e7cf93] to-[#c9a24b]" />
+          <div className="p-7 sm:p-9">
+            <p className="text-[10px] font-semibold tracking-[0.24em] text-[#8a6a24] uppercase">
+              Yönetici daveti
+            </p>
+            <h1 className="mt-2 font-serif text-3xl">Üyeliğinizi tamamlayın</h1>
+            <p className="mt-2 text-sm leading-6 text-[#5c6880]">
+              Dernek yönetimi tarafından davet edildiniz. Hesabınızı oluşturduğunuzda
+              doğrudan GH Dil platformuna erişebilirsiniz.
+            </p>
+
+            {error && (
+              <div
+                role="alert"
+                className="mt-5 rounded-xl border border-[#b42318]/25 bg-[#b42318]/8 px-4 py-3 text-sm leading-6 text-[#8a1c12]"
+              >
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={submit} className="mt-6 space-y-4">
+              <Field label="Ad soyad" required icon={<UserRound className="size-3.5" />}>
+                <input
+                  value={displayName}
+                  maxLength={100}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className={inputClass}
+                  autoComplete="name"
+                  required
+                />
+              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Kullanıcı adı" required icon={<UserRound className="size-3.5" />}>
+                  <input
+                    value={username}
+                    maxLength={50}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className={inputClass}
+                    autoComplete="username"
+                    required
+                  />
+                </Field>
+                <Field label="E-posta" required icon={<Mail className="size-3.5" />}>
+                  <input
+                    type="email"
+                    value={email}
+                    maxLength={255}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={inputClass}
+                    autoComplete="email"
+                    required
+                  />
+                </Field>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Şifre" required icon={<LockKeyhole className="size-3.5" />}>
+                  <input
+                    type="password"
+                    value={password}
+                    maxLength={25}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={inputClass}
+                    autoComplete="new-password"
+                    required
+                  />
+                </Field>
+                <Field label="Şifre tekrar" required icon={<LockKeyhole className="size-3.5" />}>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    maxLength={25}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className={inputClass}
+                    autoComplete="new-password"
+                    required
+                  />
+                </Field>
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0f1e3d] px-6 py-3.5 text-sm font-semibold text-[#f7f3ea] transition hover:bg-[#1b3159] disabled:opacity-60"
+              >
+                {loading ? <Loader2 className="size-4 animate-spin" /> : null}
+                {loading ? 'Hesap oluşturuluyor…' : 'Hesabımı oluştur'}
+                {!loading && <ArrowRight className="size-4" />}
+              </button>
+            </form>
+            <p className="mt-5 text-center text-[11px] leading-5 text-[#5c6880]">
+              Davet bağlantınız yok mu?{' '}
+              <Link href="/register" className="font-semibold underline underline-offset-2">
+                Normal üyelik başvurusu yapın
+              </Link>
+              .
+            </p>
+          </div>
+        </section>
+      </div>
+    </main>
   )
 }

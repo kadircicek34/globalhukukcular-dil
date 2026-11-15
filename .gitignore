@@ -28,3 +28,7 @@ htmlcov/
 
 # GH Dil production secrets
 deploy/.env.production
+
+# Membership documents must never be committed
+backend/membership_docs/
+membership_docs/
