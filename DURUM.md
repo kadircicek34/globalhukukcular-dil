@@ -15,7 +15,7 @@ Son güncelleme: 16 Kasım 2026, 03:05
   `0600/0700` dosya izinleri, beyaz liste e-posta alan adları
 - Production: Docker Compose, Postgres 16, Redis 7, Caddy reverse proxy
 - Admin bootstrap: `kadircicek13@icloud.com` / kullanıcı `kadir` (şifre `/root/dil/admin-credentials.txt`)
-- Yerel LLM: Ollama `qwen2.5:3b`, backend `172.17.0.1:11434`
+- Yerel LLM: Ollama `qwen2.5:3b`, `ghdil_internal` ağında `ghdil-ollama:11434`
 - Testler: backend 90 passed + Ruff temiz; frontend tsc/eslint temiz; landing Vitest 23/23;
   canlı Playwright 20/20
 - DNS: `dil.globalhukukcular.com A 169.58.198.19` yayında

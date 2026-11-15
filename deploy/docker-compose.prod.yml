@@ -34,6 +34,17 @@ services:
     networks:
       - internal
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ghdil-ollama
+    restart: unless-stopped
+    environment:
+      - OLLAMA_KEEP_ALIVE=10m
+    volumes:
+      - /usr/share/ollama/.ollama:/root/.ollama
+    networks:
+      - internal
+
   backend:
     build:
       context: ../backend

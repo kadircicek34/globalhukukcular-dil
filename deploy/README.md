@@ -37,6 +37,18 @@ docker exec gakademi-caddy-1 caddy reload --config /etc/caddy/Caddyfile
 
 `dil.globalhukukcular.com` A kaydı: `169.58.198.19` (Türkticaret DNS paneli).
 
+## Yerel LLM (Ollama)
+
+Compose, Ollama'yı `ghdil-ollama` servisi olarak `ghdil_internal` ağında çalıştırır.
+Backend `OLLAMA_BASE_URL=http://ollama:11434` kullanır; host ağ izolasyonu gerekmez.
+
+Model dosyaları host'taki `/usr/share/ollama/.ollama` dizininden salt-okunur biçimde
+container'a bağlanır. Farklı bir sunucuda modeli container içinden indirin:
+
+```bash
+docker exec ghdil-ollama ollama pull qwen2.5:3b
+```
+
 ## Admin bootstrap
 
 Public başvurunun ilk admin olmasını engellemek için `FIRST_USER_IS_ADMIN=false`
