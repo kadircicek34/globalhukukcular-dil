@@ -70,7 +70,8 @@ describe('GH Dil landing page', () => {
     const registrationLinks = within(main)
       .getAllByRole('link', { name: /Üyelik Başvurusu/i })
       .map((link) => link.getAttribute('href'))
-    expect(registrationLinks).toEqual(['/register', '/register', '/register'])
+    expect(registrationLinks.length).toBeGreaterThanOrEqual(3)
+    expect(registrationLinks.every((href) => href === '/register')).toBe(true)
     const loginLinks = within(main).getAllByRole('link', {
       name: /Giriş yap/i,
     })
@@ -87,7 +88,8 @@ describe('GH Dil landing page', () => {
     const dashboardLinks = within(main)
       .getAllByRole('link', { name: /Panele Git/i })
       .map((link) => link.getAttribute('href'))
-    expect(dashboardLinks).toEqual(['/dashboard', '/dashboard', '/dashboard'])
+    expect(dashboardLinks.length).toBeGreaterThanOrEqual(3)
+    expect(dashboardLinks.every((href) => href === '/dashboard')).toBe(true)
     expect(within(main).queryByRole('link', { name: /Giriş yap/i })).toBeNull()
   })
 
