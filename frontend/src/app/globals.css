@@ -371,9 +371,9 @@ html[data-theme='light'] {
 }
 
 .gh-reveal {
-  animation: gh-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-timeline: view();
-  animation-range: entry 5% cover 24%;
+  /* Time-based, not scroll-timeline based: content must never stay hidden
+     when a browser or automation renders a full-page view without scrolling. */
+  animation: gh-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .gh-glass {
