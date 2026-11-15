@@ -44,7 +44,7 @@ describe('LanguageBubbles', () => {
     expect(loading.querySelector('svg')).toHaveClass('motion-safe:animate-spin')
     expect(group).toHaveAttribute('aria-hidden', 'true')
     expect(group).toHaveClass('opacity-0')
-    expect(screen.queryByRole('img', { name: 'FreeLingo' })).toBeNull()
+    expect(screen.queryByRole('img', { name: 'GH Dil' })).toBeNull()
     expect(screen.queryAllByRole('img', { name: /^Localized / })).toHaveLength(
       0
     )
@@ -54,19 +54,15 @@ describe('LanguageBubbles', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
     expect(group).toHaveAttribute('aria-hidden', 'false')
     expect(group).toHaveClass('opacity-100')
-    expect(screen.getByRole('img', { name: 'FreeLingo' })).toBeInTheDocument()
-    expect(screen.getAllByRole('img', { name: /^Localized / })).toHaveLength(
-      6
-    )
+    expect(screen.getByRole('img', { name: 'GH Dil' })).toBeInTheDocument()
+    expect(screen.getAllByRole('img', { name: /^Localized / })).toHaveLength(6)
   })
 
   it('shows a small greeting sample with localized labels and target-language typography', () => {
     render(<LanguageBubbles />)
     fireEvent.click(screen.getByTestId('lingu-ready'))
 
-    expect(screen.getAllByRole('img', { name: /^Localized / })).toHaveLength(
-      6
-    )
+    expect(screen.getAllByRole('img', { name: /^Localized / })).toHaveLength(6)
     expect(screen.getByAltText('Localized en-GB')).toHaveAttribute(
       'src',
       '/flags/uk.jpg'
@@ -100,7 +96,7 @@ describe('LanguageBubbles', () => {
     expect(screen.getByText('languageGreetings.en-GB')).toHaveClass(
       'font-target-latin'
     )
-    expect(screen.getByRole('img', { name: 'FreeLingo' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'GH Dil' })).toBeInTheDocument()
   })
 
   it('hydrates server markup without changing the initial loading presentation', () => {

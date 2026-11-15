@@ -12,19 +12,19 @@
     "modes": {
       "intro": "Käytä pilvessä ilman asennusta tai omalla palvelimellasi.",
       "compare": "Vertaa vaihtoehtoja",
-      "accounts": "Jokaisella asennuksella on omat tilit ja edistyminen. Pääpainike avaa tämän asennuksen; FreeLingo Cloud -linkki avaa virallisen palvelun.",
-      "title": "Kaksi tapaa käyttää FreeLingoa",
+      "accounts": "Jokaisella asennuksella on omat tilit ja edistyminen. Pääpainike avaa tämän asennuksen; GH Dil Cloud -linkki avaa virallisen palvelun.",
+      "title": "Kaksi tapaa käyttää GH Dila",
       "cloud": {
         "title": "Cloud · Me ylläpidämme",
-        "description": "Opiskele selaimessa FreeLingon ylläpitämällä palvelulla.",
+        "description": "Opiskele selaimessa GH Diln ylläpitämällä palvelulla.",
         "setup": "Palvelintila, ylläpito ja päivitykset sisältyvät palveluun.",
         "access": "Tekoäly ja puhetoiminnot sisältyvät tilauksesi käyttörajoihin.",
         "cost": "Aloita ilmaiseksi ja valitse Premium, kun haluat harjoitella enemmän.",
-        "cta": "Avaa FreeLingo Cloud"
+        "cta": "Avaa GH Dil Cloud"
       },
       "selfHosted": {
         "title": "Oma palvelin · Sinä ylläpidät",
-        "description": "Asenna FreeLingo omaan ympäristöösi ja valitse tekoäly- ja puhepalveluntarjoajat.",
+        "description": "Asenna GH Dil omaan ympäristöösi ja valitse tekoäly- ja puhepalveluntarjoajat.",
         "setup": "Hallitse asennusta, asetuksia ja tietojen tallennusta.",
         "access": "Vapaa ja maksuton ohjelmisto AGPL-3.0-lisenssillä.",
         "cost": "Vastaat infrastruktuurista, ylläpidosta ja mahdollisista palveluntarjoajien kuluista.",
@@ -34,19 +34,19 @@
     "faq": {
       "modes": {
         "question": "Mitä eroa pilvellä ja omalla palvelimella on?",
-        "answer": "FreeLingo Cloud on ylläpidetty palvelu osoitteessa freelingo.app: luo tili ja opiskele ilman palvelimen hallintaa. Omalla palvelimella asennat ja ylläpidät FreeLingoa omassa ympäristössäsi sekä määrität tekoäly- ja puhepalvelut. Käytettävissä olevat ominaisuudet riippuvat asetuksista."
+        "answer": "GH Dil Cloud on ylläpidetty palvelu osoitteessa freelingo.app: luo tili ja opiskele ilman palvelimen hallintaa. Omalla palvelimella asennat ja ylläpidät GH Dila omassa ympäristössäsi sekä määrität tekoäly- ja puhepalvelut. Käytettävissä olevat ominaisuudet riippuvat asetuksista."
       },
       "free": {
         "question": "Voinko aloittaa ilmaiseksi? Tarvitsenko maksukortin?",
         "answer": "Rekisteröityminen ei vaadi korttia. Jos asennus tarjoaa alkuvaiheen Premium-käytön, se alkaa rekisteröityessä; sen jälkeen käyttö jatkuu maksutta rajoituksin, ellet tilaa. Maksullinen tilaus alkaa ostosta, ellei siihen nimenomaisesti sisälly lisäkokeilupäiviä. Tämä tilauskokeilu on erillinen alkujaksosta ja vaatii maksutavan."
       },
       "hosting": {
-        "question": "Mitä tarvitsen FreeLingon ylläpitoon omalla palvelimella?",
+        "question": "Mitä tarvitsen GH Diln ylläpitoon omalla palvelimella?",
         "answer": "Tarvitset palvelimen, Docker Composen sekä määritetyt tekoäly- ja puhepalvelut. Vastaat asennuksesta, päivityksistä ja varmuuskopioista. AGPL-3.0-ohjelmisto on maksuton; infrastruktuuri ja ulkoiset palvelut voivat maksaa. Laitteistovaatimukset ja tuetut puhekielet riippuvat valituista palveluntarjoajista."
       },
       "data": {
         "question": "Missä tietojani tallennetaan ja käsitellään?",
-        "answer": "Cloudissa FreeLingo-tiimi hallinnoi tallennusta ja lähettää tekoäly- ja puhesisällöt palveluntarjoajille käsittelyä varten. Omalla palvelimella hallitset tallennusta ja palveluntarjoajia: ulkoiset tekoäly- tai puhepalvelut vastaanottavat niille kuuluvan sisällön. Oma palvelin ei tarkoita automaattisesti täysin paikallista käsittelyä."
+        "answer": "Cloudissa GH Dil-tiimi hallinnoi tallennusta ja lähettää tekoäly- ja puhesisällöt palveluntarjoajille käsittelyä varten. Omalla palvelimella hallitset tallennusta ja palveluntarjoajia: ulkoiset tekoäly- tai puhepalvelut vastaanottavat niille kuuluvan sisällön. Oma palvelin ei tarkoita automaattisesti täysin paikallista käsittelyä."
       },
       "languages": {
         "question": "Mitä kieliä voin opiskella?",
@@ -69,10 +69,10 @@
     "heroSub": "Polku kielten oppimiseen: tasollesi sopivat oppitunnit, opittua vahvistavat harjoitukset ja pelit sekä äänikeskustelut tekoälyoppimiskumppanisi kanssa.",
     "startFree": "Aloita oppiminen ilmaiseksi",
     "freeNote": "Et tarvitse maksukorttia. Ilmaisella käytöllä on käyttörajat; Premium tarjoaa lisää käyttömahdollisuuksia.",
-    "seoTitle": "FreeLingo: opi kieliä suunnitelman ja Lingun avulla",
+    "seoTitle": "GH Dil: opi kieliä suunnitelman ja Lingun avulla",
     "seoDescription": "Opi kieliä A1-tasolta C2-tasolle oman opintosuunnitelman, harjoitusten ja pelien avulla. Sovella oppimaasi keskusteluissa tekoälyohjaaja Lingun kanssa.",
     "journey": {
-      "title": "Näin FreeLingo toimii",
+      "title": "Näin GH Dil toimii",
       "learnTitle": "Opi omaan tahtiisi",
       "learnDesc": "Selvitä tasosi arvioinnilla ja aloita sinulle sopiva suunnitelma. Etene oppitunti kerrallaan jäsennellyn opetussuunnitelman mukaan tasolta A1 tasolle C2.",
       "practiceTitle": "Harjoittele ja vahvista taitojasi",
@@ -136,7 +136,7 @@
     "start": "Aloita",
     "retry": "Yritä uudelleen",
     "or": "tai",
-    "appName": "FreeLingo",
+    "appName": "GH Dil",
     "days": "päivää",
     "logout": "Kirjaudu ulos",
     "logoutConfirmTitle": "Kirjaudu ulos",
@@ -489,7 +489,7 @@
     "cardProductReview": "Tuotearvostelu",
     "cardLegalDocuments": "Oikeudelliset asiakirjat",
     "sectionReview": "Arvostelu",
-    "reviewDescription": "Kerro kokemuksestasi FreeLingossa. Jos muokkaat jo hyväksyttyä arvostelua, se tarkistetaan uudelleen ennen julkista näyttämistä.",
+    "reviewDescription": "Kerro kokemuksestasi GH Dilssa. Jos muokkaat jo hyväksyttyä arvostelua, se tarkistetaan uudelleen ennen julkista näyttämistä.",
     "reviewPending": "Odottaa hyväksyntää",
     "reviewUpdate": "Päivitä",
     "reviewSaved": "Arvostelu tallennettu.",
@@ -503,28 +503,28 @@
   "legal": {
     "terms": {
       "pageTitle": "Käyttöehdot",
-      "seoDescription": "Tutustu FreeLingon kieltenoppimisalustan käyttöehtoihin: käyttäjätilit, sallittu käyttö, maksuton käyttö ja maksulliset tilaukset.",
+      "seoDescription": "Tutustu GH Diln kieltenoppimisalustan käyttöehtoihin: käyttäjätilit, sallittu käyttö, maksuton käyttö ja maksulliset tilaukset.",
       "updated": "Päivitetty viimeksi: elokuu 2026",
-      "s1Title": "1. Tietoa FreeLingosta",
-      "s1Body": "FreeLingo on avoimen lähdekoodin tekoälypohjainen kieltenoppimisalusta, jota voi käyttää kahdella tavalla: (1) itse ylläpidettynä omassa infrastruktuurissasi maksutta tai (2) FreeLingo-tiimin ylläpitämänä palveluna, jossa on ilmainen suunnitelma ja maksullisia tilauksia. Käyttämällä palvelua kummalla tahansa tavalla hyväksyt nämä käyttöehdot.",
+      "s1Title": "1. Tietoa GH Dilsta",
+      "s1Body": "GH Dil on avoimen lähdekoodin tekoälypohjainen kieltenoppimisalusta, jota voi käyttää kahdella tavalla: (1) itse ylläpidettynä omassa infrastruktuurissasi maksutta tai (2) GH Dil-tiimin ylläpitämänä palveluna, jossa on ilmainen suunnitelma ja maksullisia tilauksia. Käyttämällä palvelua kummalla tahansa tavalla hyväksyt nämä käyttöehdot.",
       "s2Title": "2. Sallittu käyttö",
-      "s2Intro": "Saat käyttää FreeLingoa vain henkilökohtaiseen kielten oppimiseen. Sitoudut olemaan:",
+      "s2Intro": "Saat käyttää GH Dila vain henkilökohtaiseen kielten oppimiseen. Sitoudut olemaan:",
       "s2i1": "Yrittämättä päästä luvatta mihinkään järjestelmän osaan.",
       "s2i2": "Lataamatta haitallista sisältöä tai häiritsemättä palvelun toimintaa.",
       "s2i3": "Jakamatta tilisi kirjautumistietoja kolmansille osapuolille.",
       "s2i4": "Käyttämättä automatisoituja komentosarjoja tai botteja AI-opettajan toimintojen väärinkäyttöön.",
       "s3Title": "3. Käyttäjätilit",
-      "s3Body": "Sinun on oltava vähintään 16-vuotias luodaksesi tilin ja käyttääksesi FreeLingoa. Rekisteröitymällä vahvistat täyttäväsi ikävaatimuksen. Jos saamme tietää tilin kuuluvan alle 16-vuotiaalle, poistamme tilin ja siihen liittyvät tiedot ilmoittamatta siitä etukäteen. Vastaat kirjautumistietojesi salassapidosta ja kaikesta tililläsi tapahtuvasta toiminnasta. Palvelimen ylläpitäjä – itse ylläpidetyssä asennuksessa sinä tai ylläpidetyssä palvelussa FreeLingo-tiimi – voi keskeyttää tai sulkea tilin, joka rikkoo näitä ehtoja.",
+      "s3Body": "Sinun on oltava vähintään 16-vuotias luodaksesi tilin ja käyttääksesi GH Dila. Rekisteröitymällä vahvistat täyttäväsi ikävaatimuksen. Jos saamme tietää tilin kuuluvan alle 16-vuotiaalle, poistamme tilin ja siihen liittyvät tiedot ilmoittamatta siitä etukäteen. Vastaat kirjautumistietojesi salassapidosta ja kaikesta tililläsi tapahtuvasta toiminnasta. Palvelimen ylläpitäjä – itse ylläpidetyssä asennuksessa sinä tai ylläpidetyssä palvelussa GH Dil-tiimi – voi keskeyttää tai sulkea tilin, joka rikkoo näitä ehtoja.",
       "s4Title": "4. Sisältö ja tekoälyvuorovaikutus",
-      "s4Body": "Keskustelut AI-opettajan kanssa tallennetaan tietokantaan, jotta opiskelu voi jatkua myöhemmin. Ylläpidetyssä palvelussa AI-chat ja äänitoiminnot käsitellään OpenAI:n rajapinnan kautta, ja sisältöösi sovelletaan OpenAI:n käyttökäytäntöjä. Tekoäly voi antaa virheellisiä vastauksia – käytä aina omaa harkintaasi. FreeLingo ei vastaa taustalla olevien kielimallien tuottamasta sisällöstä. AI-opettajan luoma sisältö (harjoitukset, korjaukset, selitykset ja muu materiaali) kuuluu sinulle henkilökohtaiseen käyttöösi. FreeLingo ei vaadi omistusoikeutta keskusteluihisi tai niistä tuotettuun sisältöön.",
+      "s4Body": "Keskustelut AI-opettajan kanssa tallennetaan tietokantaan, jotta opiskelu voi jatkua myöhemmin. Ylläpidetyssä palvelussa AI-chat ja äänitoiminnot käsitellään OpenAI:n rajapinnan kautta, ja sisältöösi sovelletaan OpenAI:n käyttökäytäntöjä. Tekoäly voi antaa virheellisiä vastauksia – käytä aina omaa harkintaasi. GH Dil ei vastaa taustalla olevien kielimallien tuottamasta sisällöstä. AI-opettajan luoma sisältö (harjoitukset, korjaukset, selitykset ja muu materiaali) kuuluu sinulle henkilökohtaiseen käyttöösi. GH Dil ei vaadi omistusoikeutta keskusteluihisi tai niistä tuotettuun sisältöön.",
       "s5Title": "5. Palvelun käyttötavat",
-      "s5Body": "Itse ylläpidetyt asennukset ovat maksuttomia, ja ylläpitäjä hallitsee täysin tietojaan ja infrastruktuuriaan. FreeLingo-tiimin ylläpitämässä palvelussa on käyttörajoituksia sisältävä ilmainen suunnitelma sekä kuukausittaisia ja vuosittaisia maksullisia Premium-tilauksia. Ilmaisessa suunnitelmassa oppitunneille ja AI-chatille on päivittäiset sekä kuuntelu- ja lukuharjoituksille ja äänikeskusteluille viikoittaiset kiintiöt. Jos aloituskokeilu on tarjolla, se antaa Premium-käyttöoikeuden ilman maksutapaa tililläsi ilmoitetuksi ajaksi. Maksulliset tilaukset ja kokeilu poistavat ilmaisen suunnitelman kiintiöt, mutta tilin yleiset rajoitukset, kuten tekoälyn käytön ja äänikeskustelujen rajat, ovat edelleen voimassa. Ylläpidetyssä palvelussa tietosi tallennetaan FreeLingo-tiimin ylläpitämille palvelimille. Tilisi nykyiset käyttörajat näkyvät koontinäytössä.",
+      "s5Body": "Itse ylläpidetyt asennukset ovat maksuttomia, ja ylläpitäjä hallitsee täysin tietojaan ja infrastruktuuriaan. GH Dil-tiimin ylläpitämässä palvelussa on käyttörajoituksia sisältävä ilmainen suunnitelma sekä kuukausittaisia ja vuosittaisia maksullisia Premium-tilauksia. Ilmaisessa suunnitelmassa oppitunneille ja AI-chatille on päivittäiset sekä kuuntelu- ja lukuharjoituksille ja äänikeskusteluille viikoittaiset kiintiöt. Jos aloituskokeilu on tarjolla, se antaa Premium-käyttöoikeuden ilman maksutapaa tililläsi ilmoitetuksi ajaksi. Maksulliset tilaukset ja kokeilu poistavat ilmaisen suunnitelman kiintiöt, mutta tilin yleiset rajoitukset, kuten tekoälyn käytön ja äänikeskustelujen rajat, ovat edelleen voimassa. Ylläpidetyssä palvelussa tietosi tallennetaan GH Dil-tiimin ylläpitämille palvelimille. Tilisi nykyiset käyttörajat näkyvät koontinäytössä.",
       "s6Title": "6. Tilaus ja laskutus",
       "s6Body": "Ilmainen suunnitelma tarjoaa rajoitetun pääsyn tekoälytoimintoihin ja, jos se on tarjolla, uusille käyttäjille Premium-aloituskokeilun ilman maksutapaa tililläsi ilmoitetuksi ajaksi. Premium poistaa ilmaisen suunnitelman kiintiöt; tilin yleiset rajoitukset ovat edelleen voimassa myös kokeilun aikana. Maksulliset tilaukset ovat kuukausittaisia tai vuosittaisia ja uusiutuvat automaattisesti, ellei niitä peruta etukäteen. Voit perua tilauksesi milloin tahansa Asetuksissa; peruutus tulee voimaan nykyisen kauden päättyessä. Ylläpitäjä voi myös päättää tilausten uusiutumisen tai tilaukset, jos palvelu muuttuu tai suljetaan. Jos palvelu päättyy ennen maksetun kauden loppua, kuluttajalainsäädännön vaatima hyvitys maksetaan. Peruuttamisoikeudet ja voimassa olevat hinnat näytetään ja käsitellään sovellettavan lain mukaisesti.",
       "s7Title": "7. Saatavuus",
-      "s7Body": "Ylläpidetty palvelu tarjotaan ilman takuuta jatkuvuudesta tai saatavuudesta. Ylläpitäjä voi milloin tahansa muuttaa palvelua, keskeyttää sen tai sulkea sen teknisistä, taloudellisista tai muista syistä. Suunnitelluista sulkemisista ilmoitetaan sovelluksessa tai sähköpostitse, kun se on kohtuudella mahdollista. Ilmoitetun päivän jälkeen tilit ja palvelun tiedot voidaan poistaa ilman palautusmahdollisuutta. FreeLingo ei tarjoa varmuuskopiointipalvelua eikä automaattista vientityökalua.",
+      "s7Body": "Ylläpidetty palvelu tarjotaan ilman takuuta jatkuvuudesta tai saatavuudesta. Ylläpitäjä voi milloin tahansa muuttaa palvelua, keskeyttää sen tai sulkea sen teknisistä, taloudellisista tai muista syistä. Suunnitelluista sulkemisista ilmoitetaan sovelluksessa tai sähköpostitse, kun se on kohtuudella mahdollista. Ilmoitetun päivän jälkeen tilit ja palvelun tiedot voidaan poistaa ilman palautusmahdollisuutta. GH Dil ei tarjoa varmuuskopiointipalvelua eikä automaattista vientityökalua.",
       "s8Title": "8. Vastuunrajoitus",
-      "s8Body": "FreeLingo ja sen kehittäjät eivät vastaa suorista, epäsuorista, satunnaisista tai välillisistä vahingoista, jotka aiheutuvat palvelun käytöstä tai siitä, ettei sitä voi käyttää. Sovellettavan lain sallimissa rajoissa kokonaisvastuu on enintään vaatimusta edeltävien kolmen kuukauden aikana maksamasi summa. Sitoudut pitämään FreeLingon ja sen kehittäjät vahingoittumattomina kolmansien osapuolten vaatimuksista, vahingoista tai kuluista, jotka aiheutuvat ehtojen vastaisesta palvelun käytöstäsi.",
+      "s8Body": "GH Dil ja sen kehittäjät eivät vastaa suorista, epäsuorista, satunnaisista tai välillisistä vahingoista, jotka aiheutuvat palvelun käytöstä tai siitä, ettei sitä voi käyttää. Sovellettavan lain sallimissa rajoissa kokonaisvastuu on enintään vaatimusta edeltävien kolmen kuukauden aikana maksamasi summa. Sitoudut pitämään GH Diln ja sen kehittäjät vahingoittumattomina kolmansien osapuolten vaatimuksista, vahingoista tai kuluista, jotka aiheutuvat ehtojen vastaisesta palvelun käytöstäsi.",
       "s9Title": "9. Sovellettava laki",
       "s9Body": "Näihin ehtoihin sovelletaan Espanjan lakia. Ehdoista johtuvat riidat kuuluvat yksinomaan Espanjan tuomioistuinten ratkaistaviksi, ellei asuinmaasi pakottava kuluttajansuojalainsäädäntö määrää toisin.",
       "s10Title": "10. Ehtojen muutokset",
@@ -534,16 +534,16 @@
       "linkPrivacy": "Tietosuojakäytäntö",
       "linkBack": "Takaisin rekisteröitymiseen",
       "linkBackSettings": "Takaisin Asetuksiin",
-      "linkContact": "Jos sinulla on kysyttävää ehdoista, käytä osoitteessa freelingo.app olevaa yhteydenottolomaketta sen ollessa saatavilla tai FreeLingon GitHub-arkistossa ilmoitettua yhteystapaa."
+      "linkContact": "Jos sinulla on kysyttävää ehdoista, käytä osoitteessa freelingo.app olevaa yhteydenottolomaketta sen ollessa saatavilla tai GH Diln GitHub-arkistossa ilmoitettua yhteystapaa."
     },
     "privacy": {
       "pageTitle": "Tietosuojakäytäntö",
-      "seoDescription": "Lue, miten FreeLingo käsittelee henkilötietoja, selaimen tallennustilaa ja anonyymejä tilastoja ja miten voit käyttää tietosuojaoikeuksiasi.",
+      "seoDescription": "Lue, miten GH Dil käsittelee henkilötietoja, selaimen tallennustilaa ja anonyymejä tilastoja ja miten voit käyttää tietosuojaoikeuksiasi.",
       "updated": "Päivitetty viimeksi: 10. lokakuuta 2026",
       "s1Title": "1. Yleiskatsaus",
-      "s1Body": "FreeLingo on saatavilla itse ylläpidettävänä sovelluksena ja ylläpidettynä palveluna. Itse ylläpidettävässä asennuksessa kaikki tiedot tallennetaan yksinomaan ylläpitäjän palvelimelle eikä FreeLingo-projektin tekijöillä ole pääsyä niihin. Ylläpidetyssä palvelussa FreeLingo-tiimi toimii rekisterinpitäjänä. Tässä käytännössä kuvataan, miten henkilötietojasi kerätään, käytetään ja suojataan.",
+      "s1Body": "GH Dil on saatavilla itse ylläpidettävänä sovelluksena ja ylläpidettynä palveluna. Itse ylläpidettävässä asennuksessa kaikki tiedot tallennetaan yksinomaan ylläpitäjän palvelimelle eikä GH Dil-projektin tekijöillä ole pääsyä niihin. Ylläpidetyssä palvelussa GH Dil-tiimi toimii rekisterinpitäjänä. Tässä käytännössä kuvataan, miten henkilötietojasi kerätään, käytetään ja suojataan.",
       "s2Title": "2. Keräämämme tiedot",
-      "s2Intro": "FreeLingoa ei ole suunnattu alle 16-vuotiaille. Emme tietoisesti kerää henkilötietoja alle 16-vuotiailta. Jos olet alle 16-vuotias, älä luo tiliä tai anna henkilötietoja. Kun luot tilin ja käytät FreeLingoa, seuraavat tiedot tallennetaan:",
+      "s2Intro": "GH Dila ei ole suunnattu alle 16-vuotiaille. Emme tietoisesti kerää henkilötietoja alle 16-vuotiailta. Jos olet alle 16-vuotias, älä luo tiliä tai anna henkilötietoja. Kun luot tilin ja käytät GH Dila, seuraavat tiedot tallennetaan:",
       "s2i1": "Käyttäjänimi, näyttönimi ja sähköpostiosoite.",
       "s2i2": "Tiivisteenä tallennettu salasana (bcrypt – salasanaasi ei koskaan tallenneta selväkielisenä).",
       "s2i3": "Äidinkielivalinta ja opiskeluasetukset.",
@@ -555,7 +555,7 @@
       "s2i9": "Kaikille kielille yhteiset tilin muistot ja mieltymykset, jotka AI-opettaja oppii keskusteluissa tai jotka lisäät itse tulevien keskustelujen mukauttamiseksi.",
       "s2i10": "Ominaisuusehdotukset, virheraportit, kommentit ja äänet, jotka lähetät palautetaulun kautta. Vain käyttäjänimesi näkyy julkisesti; kaikki käyttäjät näkevät julkaistut ehdotukset ja raportit.",
       "s3Title": "3. Tietojesi käyttö",
-      "s3Intro": "Tietojasi käytetään ainoastaan FreeLingon oppimiskokemuksen tarjoamiseen:",
+      "s3Intro": "Tietojasi käytetään ainoastaan GH Diln oppimiskokemuksen tarjoamiseen:",
       "s3i1": "Henkilöllisyytesi varmistamiseen ja istuntosi ylläpitämiseen.",
       "s3i2": "Opintosuunnitelmasi ja keskustelujesi mukauttamiseen.",
       "s3i3": "Oppimisesi edistymisen seuraamiseen.",
@@ -566,13 +566,13 @@
       "s4Title": "4. Ulkoiset tekoälypalvelut",
       "s4Body": "Ylläpidetyssä palvelussa AI-chat, puhesynteesi (TTS) ja puheen litterointi (STT) toteutetaan OpenAI:n rajapinnan kautta. Keskustelujesi sisältö ja ääni lähetetään OpenAI:lle käsiteltäväksi OpenAI:n tietosuojakäytännön mukaisesti (openai.com/privacy). Maksut käsittelee Stripe, Inc. (Yhdysvallat); Stripe käsittelee maksutiedot suoraan emmekä tallenna maksukorttitietoja palvelimillemme – maksutapahtumiasi koskee Stripen tietosuojakäytäntö (stripe.com/privacy). Itse ylläpidettävässä asennuksessa ylläpitäjä valitsee tekoälypalvelun; oletuksena käytetään paikallista Ollama-asennusta eivätkä tiedot poistu palvelimelta.",
       "s5Title": "5. Evästeet, paikallinen tallennus ja analytiikka",
-      "s5Body": "FreeLingo käyttää teknisiä evästeitä ja asetusevästeitä: refresh_token (httpOnly, oletuksena 30 päivää) ylläpitää istuntoasi, ja NEXT_LOCALE sekä LOCALE_DETECTED (enintään yksi vuosi) tallentavat ja hallitsevat käyttöliittymän kieltä. Selaimen paikalliseen tallennustilaan tallennetaan myös käyttöliittymä- ja ääniasetukset sekä ilmoitusten ja oppaiden tila, ja istuntotallennus mahdollistaa toimintojen tilapäisen jatkuvuuden. Paikalliset arvot säilyvät, kunnes sovellus tai sinä poistat ne; istuntoarvot poistetaan käytön jälkeen tai välilehden sulkeutuessa. Ylläpidetyssä palvelussa käytämme Umamia, avoimen lähdekoodin analytiikkatyökalua, jota ylläpidämme itse samalla infrastruktuurilla kuin FreeLingoa, saadaksemme anonyymejä, koottuja tilastoja palvelun käytöstä ja toiminnasta sekä parantaaksemme oppimiskokemusta. Analytiikka hyödyntää teknisiä käyttötietoja, ei käytä evästeitä, ei yhdisty käyttäjätileihin eikä sitä käytetä yksilöllisten profiilien luomiseen tai mainontaan. Analytiikkatietoja ei myydä, luovuteta eikä jaeta kolmansille osapuolille. Umami-tilastoja ei poisteta automaattisesti, vaan ne säilyvät manuaaliseen poistamiseen asti. Itse ylläpidetyissä asennuksissa analytiikan määrityksistä vastaa asennuksen ylläpitäjä. Evästeilmoitus on tiedottava; sen sulkeminen tallentaa vain tiedon siitä, että se on suljettu.",
+      "s5Body": "GH Dil käyttää teknisiä evästeitä ja asetusevästeitä: refresh_token (httpOnly, oletuksena 30 päivää) ylläpitää istuntoasi, ja NEXT_LOCALE sekä LOCALE_DETECTED (enintään yksi vuosi) tallentavat ja hallitsevat käyttöliittymän kieltä. Selaimen paikalliseen tallennustilaan tallennetaan myös käyttöliittymä- ja ääniasetukset sekä ilmoitusten ja oppaiden tila, ja istuntotallennus mahdollistaa toimintojen tilapäisen jatkuvuuden. Paikalliset arvot säilyvät, kunnes sovellus tai sinä poistat ne; istuntoarvot poistetaan käytön jälkeen tai välilehden sulkeutuessa. Ylläpidetyssä palvelussa käytämme Umamia, avoimen lähdekoodin analytiikkatyökalua, jota ylläpidämme itse samalla infrastruktuurilla kuin GH Dila, saadaksemme anonyymejä, koottuja tilastoja palvelun käytöstä ja toiminnasta sekä parantaaksemme oppimiskokemusta. Analytiikka hyödyntää teknisiä käyttötietoja, ei käytä evästeitä, ei yhdisty käyttäjätileihin eikä sitä käytetä yksilöllisten profiilien luomiseen tai mainontaan. Analytiikkatietoja ei myydä, luovuteta eikä jaeta kolmansille osapuolille. Umami-tilastoja ei poisteta automaattisesti, vaan ne säilyvät manuaaliseen poistamiseen asti. Itse ylläpidetyissä asennuksissa analytiikan määrityksistä vastaa asennuksen ylläpitäjä. Evästeilmoitus on tiedottava; sen sulkeminen tallentaa vain tiedon siitä, että se on suljettu.",
       "s6Title": "6. Oikeutesi (GDPR)",
-      "s6Body": "Jos olet Euroopan talousalueella, sinulla on GDPR:n mukaiset oikeudet saada pääsy tietoihisi, oikaista ja poistaa niitä, vastustaa käsittelyä ja siirtää tietoja. Voit poistaa tilisi itse Asetuksissa. Muut pyynnöt käsitellään manuaalisesti kohdassa 8 mainittua yhteystapaa käyttäen; FreeLingo ei tarjoa automaattista vientityökalua. Käsittelemme tietoja palvelun tarjoamiseksi (GDPR:n 6 artiklan 1 kohdan b alakohta). OpenAI ja Stripe voivat käsitellä tietoja Yhdysvalloissa kansainvälisiin siirtoihin sovellettavien suojatoimien mukaisesti. Voit valittaa Espanjan tietosuojaviranomaiselle (aepd.es) tai oman maasi valvontaviranomaiselle.",
+      "s6Body": "Jos olet Euroopan talousalueella, sinulla on GDPR:n mukaiset oikeudet saada pääsy tietoihisi, oikaista ja poistaa niitä, vastustaa käsittelyä ja siirtää tietoja. Voit poistaa tilisi itse Asetuksissa. Muut pyynnöt käsitellään manuaalisesti kohdassa 8 mainittua yhteystapaa käyttäen; GH Dil ei tarjoa automaattista vientityökalua. Käsittelemme tietoja palvelun tarjoamiseksi (GDPR:n 6 artiklan 1 kohdan b alakohta). OpenAI ja Stripe voivat käsitellä tietoja Yhdysvalloissa kansainvälisiin siirtoihin sovellettavien suojatoimien mukaisesti. Voit valittaa Espanjan tietosuojaviranomaiselle (aepd.es) tai oman maasi valvontaviranomaiselle.",
       "s7Title": "7. Tietojen säilyttäminen ja poistaminen",
-      "s7Body": "Palvelun tietoja säilytetään niin kauan kuin tilisi on olemassa ja ylläpidetty palvelu toimii. Voit poistaa muistoja, kieliä tai koko tilisi Asetuksissa. Ylläpitäjä voi myös poistaa kaikki tilit ja niiden tiedot palvelun sulkemisen yhteydessä ilmoitettuaan siitä kohtuullisesti mahdollisuuksien mukaan. Poistamista ei voi perua. Poistettuaan hallinnassaan olevat järjestelmät ja kopiot FreeLingo ei säilytä henkilötietoja. Stripe voi säilyttää maksu- ja tapahtumatietoja omien käytäntöjensä ja lakisääteisten velvoitteidensa mukaisesti.",
+      "s7Body": "Palvelun tietoja säilytetään niin kauan kuin tilisi on olemassa ja ylläpidetty palvelu toimii. Voit poistaa muistoja, kieliä tai koko tilisi Asetuksissa. Ylläpitäjä voi myös poistaa kaikki tilit ja niiden tiedot palvelun sulkemisen yhteydessä ilmoitettuaan siitä kohtuullisesti mahdollisuuksien mukaan. Poistamista ei voi perua. Poistettuaan hallinnassaan olevat järjestelmät ja kopiot GH Dil ei säilytä henkilötietoja. Stripe voi säilyttää maksu- ja tapahtumatietoja omien käytäntöjensä ja lakisääteisten velvoitteidensa mukaisesti.",
       "s8Title": "8. Yhteydenotto",
-      "s8Body": "Ylläpidetyn palvelun tietosuojaan liittyvissä kysymyksissä käytä osoitteessa freelingo.app olevaa yhteydenottolomaketta sen ollessa käytettävissä. Palvelun sulkemisen jälkeen käytä FreeLingon GitHub-arkistossa ilmoitettua yhteystapaa äläkä julkaise henkilötietoja julkisissa tiketeissä. Itse ylläpidettävässä asennuksessa ota yhteyttä sen ylläpitäjään.",
+      "s8Body": "Ylläpidetyn palvelun tietosuojaan liittyvissä kysymyksissä käytä osoitteessa freelingo.app olevaa yhteydenottolomaketta sen ollessa käytettävissä. Palvelun sulkemisen jälkeen käytä GH Diln GitHub-arkistossa ilmoitettua yhteystapaa äläkä julkaise henkilötietoja julkisissa tiketeissä. Itse ylläpidettävässä asennuksessa ota yhteyttä sen ylläpitäjään.",
       "s9Title": "9. Osittainen pätemättömyys",
       "s9Body": "Jos tämän käytännön jokin määräys todetaan pätemättömäksi tai täytäntöönpanokelvottomaksi, sitä rajoitetaan tai se poistetaan vain välttämättömässä laajuudessa, ja muut määräykset pysyvät täysin voimassa.",
       "linkTerms": "Käyttöehdot",
@@ -1322,7 +1322,7 @@
     "workflowStep5": "Harjoittele sanastoa muistikorteilla samalla",
     "workflowStep6": "Harjoittele vapaata keskustelua Lingun kanssa",
     "q_language": "Mitä kieltä voin oppia?",
-    "a_language": "FreeLingo tukee tällä hetkellä useita kieliä ({languages}), ja lisäämme kieliä ajan mittaan. Kun uusi kieli tulee saataville, löydät sen kohdasta Asetukset → Omat kielet – lisää se ja aloita opiskelu heti.",
+    "a_language": "GH Dil tukee tällä hetkellä useita kieliä ({languages}), ja lisäämme kieliä ajan mittaan. Kun uusi kieli tulee saataville, löydät sen kohdasta Asetukset → Omat kielet – lisää se ja aloita opiskelu heti.",
     "q_assessment": "Mikä tasoarvio on?",
     "a_assessment": "Mukautuva testi, jossa on enintään 15 kysymystä opiskelukielen omasta kysymyspankista. Se kattaa kieliopin, sanaston ja luetun ymmärtämisen tasoilla A1–C2. Tulos arvioi CEFR-tasosi ja näyttää vahvuudet ja harjoittelukohteet; voit muuttaa ehdotettua tasoa ennen suunnitelman luomista.",
     "q_studyPlan": "Mikä opintosuunnitelma on ja miten luon sellaisen?",
@@ -1341,7 +1341,7 @@
     "a_listening": "<strong>Kuuntelu</strong>-osiossa Lingu valmistelee taitotasoosi sopivia kuunteluharjoituksia. Kuuntele ja vastaa viiteen ymmärtämiskysymykseen. Saat lähetettyäsi pistemäärän (0–5), XP-pisteet, oikeat vastaukset ja koko litteroinnin. Voit luoda uusia harjoituksia halutessasi.",
     "q_reading": "Miten lukuharjoitukset toimivat?",
     "a_reading": "<strong>Lukeminen</strong> sisältää tasosi mukaisia tekstejä – ilmoituksia, sähköposteja, artikkeleita, blogikirjoituksia ja muuta. Lue teksti ja vastaa viiteen monivalintakysymykseen. Saat lähetettyäsi pistemäärän (0–5) ja XP-pisteet. Voit luoda uusia harjoituksia halutessasi.",
-    "q_providers": "Mitä tekoälypalveluita FreeLingo tukee?",
+    "q_providers": "Mitä tekoälypalveluita GH Dil tukee?",
     "a_providers_intro": "Määritä tiedostossa <code>.env</code> asetuksella <code>LLM_PROVIDER</code>:",
     "provider_ollama": "Paikallinen ja maksuton. Ollaman on oltava käynnissä palvelimella. Suositeltu malli: gemma4:e4b. Ilman GPU:ta toiminta voi olla hidasta.",
     "provider_openai": "OpenAI-palvelu ylläpitäjän määrittämällä mallilla. Vaatii OPENAI_API_KEY-avaimen ja voi aiheuttaa käyttökuluja.",
@@ -1592,7 +1592,7 @@
     "trialHeadline": "Ilmainen kokeilu",
     "trialHeadlineTrialUsed": "Premium",
     "trialTitle": "Aloita {days} päivän ilmaisella kokeilulla",
-    "trialTitleTrialUsed": "Ota FreeLingo Premium käyttöön",
+    "trialTitleTrialUsed": "Ota GH Dil Premium käyttöön",
     "trialDesc": "Kokeile Premium-käyttöoikeutta harjoitteluun Lingun kanssa sekä puhe-, kuuntelu- ja lukuharjoituksiin ennen ensimmäistä maksua.",
     "trialDescTrialUsed": "Valitse tilaus ja harjoittele enemmän Lingun kanssa sekä puhe-, kuuntelu- ja lukuharjoituksilla.",
     "trialCtaMonthly": "Kokeile ilmaiseksi, sitten €{price}/kk",
@@ -1623,7 +1623,7 @@
     "audioError": "Ääntä ei voitu toistaa. Voit yrittää uudelleen.",
     "step1": {
       "label": "Tervetuloa",
-      "title": "Tervetuloa FreeLingoon",
+      "title": "Tervetuloa GH Dilon",
       "desc": "Hei! Olen Lingu, kieltenopiskelukaverisi. Näytän sinulle, miten voimme oppia yhdessä."
     },
     "step2": {
@@ -1662,7 +1662,7 @@
     "paywallGamesTitle": "Jatka harjoittelua peleillä",
     "paywallGamesDesc": "Ilmainen pelikiintiösi on käytetty tai pelit vaativat Premiumin. Voit jatkaa olemassa olevia pelejä.",
     "paywallLabel": "Premium vaaditaan",
-    "paywallTitle": "Avaa FreeLingo Premium",
+    "paywallTitle": "Avaa GH Dil Premium",
     "paywallDesc": "Aloita {days} päivän ilmainen kokeilu ja harjoittele enemmän Premiumilla ennen ensimmäistä maksua.",
     "paywallDescTrialUsed": "Harjoittele enemmän Premiumilla ja tarkista summa ennen vahvistamista.",
     "paywallChatTitle": "Lisää harjoittelua Lingun kanssa",
@@ -1683,7 +1683,7 @@
     "planYearly": "Paras vastine · €{price}/vuosi · 2 kuukautta ilmaiseksi →",
     "checkoutError": "Maksua ei voitu aloittaa. Yritä uudelleen.",
     "pricingTitle": "Tilaukset ja hinnat",
-    "pricingContext": "Nämä tilaukset koskevat tätä asennusta. Oma palvelin ei vaadi FreeLingo Cloud -tilausta; ylläpitäjä määrittää pääsyn ja käyttörajat.",
+    "pricingContext": "Nämä tilaukset koskevat tätä asennusta. Oma palvelin ei vaadi GH Dil Cloud -tilausta; ylläpitäjä määrittää pääsyn ja käyttörajat.",
     "pricingDesc": "Lisäkokeilu tilauksen yhteydessä: {days} päivää · kortti vaaditaan · sen jälkeen sovelletaan tilauksen hintaa",
     "pricingDescTrialUsed": "Maksullinen kuukausi- tai vuositilaus alkaa ostosta. Peruuta milloin tahansa.",
     "planMonthlyName": "Kuukausittain",
@@ -1715,7 +1715,7 @@
       "l5": "7 päivän täyden käyttöoikeuden kokeilu"
     },
     "successLabel": "Tilaus vahvistettu",
-    "successTitle": "Tervetuloa FreeLingo Premiumiin!",
+    "successTitle": "Tervetuloa GH Dil Premiumiin!",
     "successDesc": "Tilauksesi on nyt aktiivinen. Käytä Premiumia tilisi yleisten rajoitusten puitteissa.",
     "successCheckingLabel": "Vahvistetaan tilausta",
     "successCheckingTitle": "Tarkistetaan tilaustasi",
@@ -1883,7 +1883,7 @@
     },
     "entry5": {
       "label": "Sujuvampi käyttökokemus",
-      "desc": "Korjasimme myös pieniä virheitä ja hioimme yksityiskohtia, jotta FreeLingolla oppiminen olisi joka päivä entistä mukavampaa."
+      "desc": "Korjasimme myös pieniä virheitä ja hioimme yksityiskohtia, jotta GH Dillla oppiminen olisi joka päivä entistä mukavampaa."
     }
   },
   "contact": {
@@ -2020,7 +2020,7 @@
     "statusError": "Arvostelusi tilaa ei voitu tarkistaa. Yritä myöhemmin uudelleen.",
     "ratingRequiredError": "Valitse arvosana ennen lähettämistä.",
     "saveError": "Arvosteluasi ei voitu tallentaa. Yritä uudelleen.",
-    "eyebrow": "Arvostele FreeLingo",
+    "eyebrow": "Arvostele GH Dil",
     "title": "Millainen kokemuksesi oli?",
     "closeLabel": "Sulje arvostelukehote",
     "checking": "Tarkistetaan arvostelun tilaa...",
@@ -2036,7 +2036,7 @@
   "landingReviews": {
     "eyebrow": "Oppijoiden tarinoita",
     "title": "Oppiminen tuntuu todemmalta, kun kerrot siitä itse",
-    "subtitle": "Arvosteluja oppijoilta, jotka harjoittelevat jo Lingun kanssa FreeLingossa.",
+    "subtitle": "Arvosteluja oppijoilta, jotka harjoittelevat jo Lingun kanssa GH Dilssa.",
     "averageLabel": "{average}/5 · {count, plural, one {# arvio} other {# arviota}}",
     "ratingCount": "{count, plural, one {# arvio} other {# arviota}}",
     "carouselLabel": "Opiskelijoiden arvostelut",
@@ -2048,7 +2048,7 @@
     "readLess": "Näytä vähemmän",
     "learningLanguage": "Opiskelee: {language}",
     "starsLabel": "{rating}/5 tähteä",
-    "ratingOnly": "Vahvistettu FreeLingo-arvosana."
+    "ratingOnly": "Vahvistettu GH Dil-arvosana."
   },
   "adminReviews": {
     "title": "Arvostelut",

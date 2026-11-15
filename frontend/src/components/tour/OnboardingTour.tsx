@@ -157,7 +157,7 @@ export default function OnboardingTour() {
       <div>
         <div className="border-fl-border flex items-center justify-between gap-4 border-b px-5 py-4 md:px-8">
           <span className="font-code text-sm font-bold tracking-widest uppercase">
-            FreeLingo
+            GH Dil
           </span>
           <div className="flex items-center gap-4">
             <span

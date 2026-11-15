@@ -12,19 +12,19 @@
     "modes": {
       "intro": "In der Cloud ohne Installation oder selbst gehostet auf deinem Server verfügbar.",
       "compare": "Optionen vergleichen",
-      "accounts": "Jede Installation hat eigene Konten und Lernfortschritte. Die Hauptschaltfläche öffnet diese Installation; der FreeLingo-Cloud-Link führt zum offiziellen Dienst.",
-      "title": "Zwei Möglichkeiten, FreeLingo zu nutzen",
+      "accounts": "Jede Installation hat eigene Konten und Lernfortschritte. Die Hauptschaltfläche öffnet diese Installation; der GH Dil-Cloud-Link führt zum offiziellen Dienst.",
+      "title": "Zwei Möglichkeiten, GH Dil zu nutzen",
       "cloud": {
         "title": "Cloud · Wir kümmern uns darum",
-        "description": "Lerne im Browser mit dem verwalteten Dienst von FreeLingo.",
+        "description": "Lerne im Browser mit dem verwalteten Dienst von GH Dil.",
         "setup": "Hosting, Wartung und Updates inklusive.",
         "access": "KI und Sprachfunktionen im Rahmen deines Tarifs enthalten.",
         "cost": "Starte kostenlos und wähle Premium, wenn du mehr üben möchtest.",
-        "cta": "FreeLingo Cloud öffnen"
+        "cta": "GH Dil Cloud öffnen"
       },
       "selfHosted": {
         "title": "Selbst gehostet · Du verwaltest es",
-        "description": "Installiere FreeLingo auf deiner Infrastruktur und wähle deine KI- und Sprachanbieter.",
+        "description": "Installiere GH Dil auf deiner Infrastruktur und wähle deine KI- und Sprachanbieter.",
         "setup": "Kontrolle über Installation, Konfiguration und Datenspeicherung.",
         "access": "Kostenlose Open-Source-Software unter AGPL-3.0.",
         "cost": "Infrastruktur, Wartung und mögliche Anbieterkosten trägst du selbst.",
@@ -34,7 +34,7 @@
     "faq": {
       "modes": {
         "question": "Was unterscheidet Cloud und Self-Hosting?",
-        "answer": "FreeLingo Cloud ist der verwaltete Dienst auf freelingo.app: Erstelle ein Konto und lerne, ohne einen Server zu betreiben. Beim Self-Hosting installierst und wartest du FreeLingo auf deiner Infrastruktur und richtest KI- und Sprachdienste ein. Die verfügbaren Funktionen hängen von deiner Konfiguration ab."
+        "answer": "GH Dil Cloud ist der verwaltete Dienst auf freelingo.app: Erstelle ein Konto und lerne, ohne einen Server zu betreiben. Beim Self-Hosting installierst und wartest du GH Dil auf deiner Infrastruktur und richtest KI- und Sprachdienste ein. Die verfügbaren Funktionen hängen von deiner Konfiguration ab."
       },
       "free": {
         "question": "Kann ich kostenlos starten? Brauche ich eine Karte?",
@@ -46,7 +46,7 @@
       },
       "data": {
         "question": "Wo werden meine Daten gespeichert und verarbeitet?",
-        "answer": "In der Cloud verwaltet das FreeLingo-Team die Speicherung und sendet KI- und Sprachinhalte zur Verarbeitung an die Anbieter des Dienstes. Beim Self-Hosting bestimmst du Speicherort und Anbieter: Externe KI- oder Sprachdienste erhalten die jeweiligen Inhalte. Self-Hosting bedeutet nicht automatisch ausschließlich lokale Verarbeitung."
+        "answer": "In der Cloud verwaltet das GH Dil-Team die Speicherung und sendet KI- und Sprachinhalte zur Verarbeitung an die Anbieter des Dienstes. Beim Self-Hosting bestimmst du Speicherort und Anbieter: Externe KI- oder Sprachdienste erhalten die jeweiligen Inhalte. Self-Hosting bedeutet nicht automatisch ausschließlich lokale Verarbeitung."
       },
       "languages": {
         "question": "Welche Sprachen kann ich lernen?",
@@ -69,10 +69,10 @@
     "heroSub": "Dein Weg zum Sprachenlernen: Lektionen auf deinem Niveau, Übungen und Spiele zum Festigen und Sprachgespräche mit deinem KI-Lernbegleiter.",
     "startFree": "Starte kostenlos mit dem Lernen",
     "freeNote": "Keine Kreditkarte nötig. Der kostenlose Zugang hat Nutzungslimits; mit Premium kannst du ihn erweitern.",
-    "seoTitle": "FreeLingo: Sprachen lernen mit einem Plan und Lingu",
+    "seoTitle": "GH Dil: Sprachen lernen mit einem Plan und Lingu",
     "seoDescription": "Lerne Sprachen von A1 bis C2 mit einem persönlichen Lernplan, Übungen und Spielen. Wende das Gelernte im Gespräch mit Lingu, deinem KI-Tutor, an.",
     "journey": {
-      "title": "So funktioniert FreeLingo",
+      "title": "So funktioniert GH Dil",
       "learnTitle": "Lerne in deinem Tempo",
       "learnDesc": "Finde mit einem Einstufungstest dein Niveau und starte einen passenden Lernplan. Arbeite dich Lektion für Lektion durch einen strukturierten Lehrplan von A1 bis C2.",
       "practiceTitle": "Übe und festige dein Wissen",
@@ -136,7 +136,7 @@
     "start": "Starten",
     "retry": "Erneut versuchen",
     "or": "oder",
-    "appName": "FreeLingo",
+    "appName": "GH Dil",
     "days": "Tage",
     "logout": "Abmelden",
     "logoutConfirmTitle": "Abmelden",
@@ -489,7 +489,7 @@
     "cardProductReview": "Produktbewertung",
     "cardLegalDocuments": "Rechtliche Dokumente",
     "sectionReview": "Bewertung",
-    "reviewDescription": "Teile deine Erfahrung mit FreeLingo. Wenn du eine bereits freigegebene Bewertung bearbeitest, wird sie vor der öffentlichen Anzeige erneut geprüft.",
+    "reviewDescription": "Teile deine Erfahrung mit GH Dil. Wenn du eine bereits freigegebene Bewertung bearbeitest, wird sie vor der öffentlichen Anzeige erneut geprüft.",
     "reviewPending": "Wartet auf Freigabe",
     "reviewUpdate": "Aktualisieren",
     "reviewSaved": "Bewertung gespeichert.",
@@ -503,28 +503,28 @@
   "legal": {
     "terms": {
       "pageTitle": "Nutzungsbedingungen",
-      "seoDescription": "Lesen Sie die FreeLingo-Nutzungsbedingungen zu Konten, zulässiger Nutzung, kostenlosem Zugang und Abonnements der Sprachlernplattform.",
+      "seoDescription": "Lesen Sie die GH Dil-Nutzungsbedingungen zu Konten, zulässiger Nutzung, kostenlosem Zugang und Abonnements der Sprachlernplattform.",
       "updated": "Zuletzt aktualisiert: August 2026",
-      "s1Title": "1. Über FreeLingo",
-      "s1Body": "FreeLingo ist eine quelloffene, KI-gestützte Sprachlernplattform, die in zwei Modi verfügbar ist: (1) selbst gehostet, wo Sie sie auf Ihrer eigenen Infrastruktur kostenlos betreiben, und (2) als gehosteter Dienst des FreeLingo-Teams mit einem kostenlosen Plan und kostenpflichtigen Abonnements. Durch die Nutzung des Dienstes in einem der beiden Modi stimmen Sie diesen Nutzungsbedingungen zu.",
+      "s1Title": "1. Über GH Dil",
+      "s1Body": "GH Dil ist eine quelloffene, KI-gestützte Sprachlernplattform, die in zwei Modi verfügbar ist: (1) selbst gehostet, wo Sie sie auf Ihrer eigenen Infrastruktur kostenlos betreiben, und (2) als gehosteter Dienst des GH Dil-Teams mit einem kostenlosen Plan und kostenpflichtigen Abonnements. Durch die Nutzung des Dienstes in einem der beiden Modi stimmen Sie diesen Nutzungsbedingungen zu.",
       "s2Title": "2. Zulässige Nutzung",
-      "s2Intro": "Sie dürfen FreeLingo ausschließlich für persönliche Sprachlernzwecke nutzen. Sie verpflichten sich, Folgendes zu unterlassen:",
+      "s2Intro": "Sie dürfen GH Dil ausschließlich für persönliche Sprachlernzwecke nutzen. Sie verpflichten sich, Folgendes zu unterlassen:",
       "s2i1": "Versuche, unbefugten Zugang zu Teilen des Systems zu erlangen.",
       "s2i2": "Hochladen von schädlichen Inhalten oder Versuche, den Dienst zu stören.",
       "s2i3": "Weitergabe Ihrer Zugangsdaten an Dritte.",
       "s2i4": "Verwendung automatisierter Skripte oder Bots zur missbräuchlichen Nutzung der KI-Tutorfunktionen.",
       "s3Title": "3. Benutzerkonten",
-      "s3Body": "Sie müssen mindestens 16 Jahre alt sein, um ein Konto zu erstellen und FreeLingo zu nutzen. Mit der Registrierung bestätigen Sie, dass Sie diese Altersanforderung erfüllen. Wenn wir feststellen, dass ein Konto einer Person unter 16 Jahren gehört, werden wir es zusammen mit allen zugehörigen Daten ohne Vorankündigung löschen. Sie sind für die Vertraulichkeit Ihrer Zugangsdaten und alle Aktivitäten unter Ihrem Konto verantwortlich. Der Betreiber der Instanz — Sie selbst bei selbst gehosteten Installationen oder das FreeLingo-Team beim gehosteten Dienst — kann Konten, die gegen diese Bedingungen verstoßen, sperren oder kündigen.",
+      "s3Body": "Sie müssen mindestens 16 Jahre alt sein, um ein Konto zu erstellen und GH Dil zu nutzen. Mit der Registrierung bestätigen Sie, dass Sie diese Altersanforderung erfüllen. Wenn wir feststellen, dass ein Konto einer Person unter 16 Jahren gehört, werden wir es zusammen mit allen zugehörigen Daten ohne Vorankündigung löschen. Sie sind für die Vertraulichkeit Ihrer Zugangsdaten und alle Aktivitäten unter Ihrem Konto verantwortlich. Der Betreiber der Instanz — Sie selbst bei selbst gehosteten Installationen oder das GH Dil-Team beim gehosteten Dienst — kann Konten, die gegen diese Bedingungen verstoßen, sperren oder kündigen.",
       "s4Title": "4. Inhalte und KI-Interaktionen",
-      "s4Body": "Gespräche mit dem KI-Tutor werden für die Lernkontinuität in der Datenbank gespeichert. Beim gehosteten Dienst werden Chat und Sprachfunktionen über die OpenAI-API verarbeitet, und Ihre Inhalte unterliegen den Nutzungsrichtlinien von OpenAI. Die KI kann ungenaue Antworten liefern — beurteilen Sie diese immer mit eigenem Urteilsvermögen. FreeLingo haftet nicht für Inhalte, die von den zugrunde liegenden Sprachmodellen generiert werden. Die vom KI-Tutor generierten Inhalte (Übungen, Korrekturen, Erklärungen und andere Materialien) gehören Ihnen für Ihre persönliche Nutzung. FreeLingo erhebt keinen Eigentumsanspruch auf Ihre Gespräche oder die daraus generierten Inhalte.",
+      "s4Body": "Gespräche mit dem KI-Tutor werden für die Lernkontinuität in der Datenbank gespeichert. Beim gehosteten Dienst werden Chat und Sprachfunktionen über die OpenAI-API verarbeitet, und Ihre Inhalte unterliegen den Nutzungsrichtlinien von OpenAI. Die KI kann ungenaue Antworten liefern — beurteilen Sie diese immer mit eigenem Urteilsvermögen. GH Dil haftet nicht für Inhalte, die von den zugrunde liegenden Sprachmodellen generiert werden. Die vom KI-Tutor generierten Inhalte (Übungen, Korrekturen, Erklärungen und andere Materialien) gehören Ihnen für Ihre persönliche Nutzung. GH Dil erhebt keinen Eigentumsanspruch auf Ihre Gespräche oder die daraus generierten Inhalte.",
       "s5Title": "5. Dienstmodalitäten",
-      "s5Body": "Selbst gehostete Installationen sind kostenlos, und der Betreiber behält die volle Kontrolle über seine Daten und Infrastruktur. Der vom FreeLingo-Team betriebene gehostete Dienst bietet einen kostenlosen Plan mit Nutzungslimits und kostenpflichtige Abonnements für Premium-Zugang, die monatlich oder jährlich abgerechnet werden können. Der kostenlose Plan hat begrenzte tägliche Kontingente für Lektionen und KI-Chat sowie wöchentliche Kontingente für Hörübungen, Leseübungen und Sprachgespräche. Sofern angeboten, gewährt die anfängliche Testphase Premium-Zugang ohne Zahlungsmethode für den in Ihrem Konto angegebenen Zeitraum. Kostenpflichtige Abonnements und die Testphase heben die Kontingente des kostenlosen Plans auf; allgemeine Kontolimits, einschließlich der Limits für KI-Nutzung und Sprachgespräche, gelten weiterhin. Beim gehosteten Dienst werden Ihre Daten auf Servern des FreeLingo-Teams gespeichert. Die aktuellen Nutzungslimits für Ihr Konto finden Sie in Ihrem Dashboard.",
+      "s5Body": "Selbst gehostete Installationen sind kostenlos, und der Betreiber behält die volle Kontrolle über seine Daten und Infrastruktur. Der vom GH Dil-Team betriebene gehostete Dienst bietet einen kostenlosen Plan mit Nutzungslimits und kostenpflichtige Abonnements für Premium-Zugang, die monatlich oder jährlich abgerechnet werden können. Der kostenlose Plan hat begrenzte tägliche Kontingente für Lektionen und KI-Chat sowie wöchentliche Kontingente für Hörübungen, Leseübungen und Sprachgespräche. Sofern angeboten, gewährt die anfängliche Testphase Premium-Zugang ohne Zahlungsmethode für den in Ihrem Konto angegebenen Zeitraum. Kostenpflichtige Abonnements und die Testphase heben die Kontingente des kostenlosen Plans auf; allgemeine Kontolimits, einschließlich der Limits für KI-Nutzung und Sprachgespräche, gelten weiterhin. Beim gehosteten Dienst werden Ihre Daten auf Servern des GH Dil-Teams gespeichert. Die aktuellen Nutzungslimits für Ihr Konto finden Sie in Ihrem Dashboard.",
       "s6Title": "6. Abonnement und Abrechnung",
       "s6Body": "Der kostenlose Plan bietet begrenzten Zugang zu KI-Funktionen und, sofern angeboten, eine anfängliche Premium-Testphase für neue Nutzer ohne Zahlungsmethode für den in Ihrem Konto angegebenen Zeitraum. Premium hebt die Kontingente des kostenlosen Plans auf; allgemeine Kontolimits gelten weiterhin, auch während der Testphase. Kostenpflichtige Abonnements laufen monatlich oder jährlich und verlängern sich automatisch, sofern sie nicht vorher gekündigt werden. Sie können jederzeit in den Einstellungen zum Ende des laufenden Zeitraums kündigen. Der Betreiber kann Verlängerungen oder Abonnements ebenfalls beenden, wenn der Dienst geändert oder geschlossen wird. Endet der Dienst vor Ablauf eines bezahlten Zeitraums, gilt die nach Verbraucherrecht erforderliche Rückerstattung.",
       "s7Title": "7. Verfügbarkeit",
-      "s7Body": "Der gehostete Dienst wird ohne Garantie für Fortbestand oder Verfügbarkeit angeboten. Der Betreiber kann ihn jederzeit aus technischen, wirtschaftlichen oder anderen Gründen ändern, aussetzen oder schließen. Geplante Schließungen werden, soweit vernünftigerweise möglich, über die Anwendung oder per E-Mail angekündigt. Danach können Konten und Betriebsdaten unwiederbringlich gelöscht werden. FreeLingo bietet keinen Sicherungsdienst und kein automatisches Exportwerkzeug.",
+      "s7Body": "Der gehostete Dienst wird ohne Garantie für Fortbestand oder Verfügbarkeit angeboten. Der Betreiber kann ihn jederzeit aus technischen, wirtschaftlichen oder anderen Gründen ändern, aussetzen oder schließen. Geplante Schließungen werden, soweit vernünftigerweise möglich, über die Anwendung oder per E-Mail angekündigt. Danach können Konten und Betriebsdaten unwiederbringlich gelöscht werden. GH Dil bietet keinen Sicherungsdienst und kein automatisches Exportwerkzeug.",
       "s8Title": "8. Haftungsbeschränkung",
-      "s8Body": "FreeLingo und seine Mitwirkenden haften nicht für direkte, indirekte, zufällige oder Folgeschäden, die aus der Nutzung oder Nichtnutzbarkeit dieses Dienstes entstehen. Im gesetzlich zulässigen Höchstmaß beschränkt sich die Gesamthaftung auf den Betrag, den Sie in den drei Monaten vor der Forderung bezahlt haben. Sie verpflichten sich, FreeLingo und seine Mitwirkenden von sämtlichen Ansprüchen, Schäden oder Kosten Dritter freizustellen und schadlos zu halten, die aus Ihrer Nutzung des Dienstes unter Verstoß gegen diese Bedingungen entstehen.",
+      "s8Body": "GH Dil und seine Mitwirkenden haften nicht für direkte, indirekte, zufällige oder Folgeschäden, die aus der Nutzung oder Nichtnutzbarkeit dieses Dienstes entstehen. Im gesetzlich zulässigen Höchstmaß beschränkt sich die Gesamthaftung auf den Betrag, den Sie in den drei Monaten vor der Forderung bezahlt haben. Sie verpflichten sich, GH Dil und seine Mitwirkenden von sämtlichen Ansprüchen, Schäden oder Kosten Dritter freizustellen und schadlos zu halten, die aus Ihrer Nutzung des Dienstes unter Verstoß gegen diese Bedingungen entstehen.",
       "s9Title": "9. Anwendbares Recht",
       "s9Body": "Diese Bedingungen unterliegen dem spanischen Recht. Alle aus diesen Bedingungen entstehenden Streitigkeiten unterliegen der ausschließlichen Gerichtsbarkeit der spanischen Gerichte, sofern nicht das Verbraucherschutzrecht Ihres Wohnsitzlandes anderes vorsieht.",
       "s10Title": "10. Änderungen dieser Bedingungen",
@@ -534,16 +534,16 @@
       "linkPrivacy": "Datenschutzerklärung",
       "linkBack": "Zurück zur Registrierung",
       "linkBackSettings": "Zurück zu Einstellungen",
-      "linkContact": "Bei Fragen nutzen Sie das Kontaktformular auf freelingo.app, solange es verfügbar ist, oder den im FreeLingo-GitHub-Repository veröffentlichten Kontaktweg."
+      "linkContact": "Bei Fragen nutzen Sie das Kontaktformular auf freelingo.app, solange es verfügbar ist, oder den im GH Dil-GitHub-Repository veröffentlichten Kontaktweg."
     },
     "privacy": {
       "pageTitle": "Datenschutzerklärung",
-      "seoDescription": "Erfahren Sie, wie FreeLingo personenbezogene Daten, Browserspeicher und anonyme Statistiken verarbeitet und welche Datenschutzrechte Sie haben.",
+      "seoDescription": "Erfahren Sie, wie GH Dil personenbezogene Daten, Browserspeicher und anonyme Statistiken verarbeitet und welche Datenschutzrechte Sie haben.",
       "updated": "Zuletzt aktualisiert: 10. Oktober 2026",
       "s1Title": "1. Überblick",
-      "s1Body": "FreeLingo ist als selbst gehostete Anwendung und als gehosteter Dienst verfügbar. Bei selbst gehosteten Installationen werden alle Daten ausschließlich auf dem Server des Betreibers gespeichert, und die Autoren des FreeLingo-Projekts haben keinen Zugriff darauf. Beim gehosteten Dienst agiert das FreeLingo-Team als Verantwortlicher und diese Richtlinie beschreibt, wie Ihre personenbezogenen Daten erhoben, genutzt und geschützt werden.",
+      "s1Body": "GH Dil ist als selbst gehostete Anwendung und als gehosteter Dienst verfügbar. Bei selbst gehosteten Installationen werden alle Daten ausschließlich auf dem Server des Betreibers gespeichert, und die Autoren des GH Dil-Projekts haben keinen Zugriff darauf. Beim gehosteten Dienst agiert das GH Dil-Team als Verantwortlicher und diese Richtlinie beschreibt, wie Ihre personenbezogenen Daten erhoben, genutzt und geschützt werden.",
       "s2Title": "2. Erhobene Daten",
-      "s2Intro": "FreeLingo richtet sich nicht an Kinder unter 16 Jahren. Wir erfassen wissentlich keine personenbezogenen Daten von Personen unter 16 Jahren. Wenn Sie unter 16 Jahre alt sind, erstellen Sie bitte kein Konto und stellen Sie keine personenbezogenen Daten bereit. Bei der Kontoerstellung und Nutzung von FreeLingo werden folgende Daten gespeichert:",
+      "s2Intro": "GH Dil richtet sich nicht an Kinder unter 16 Jahren. Wir erfassen wissentlich keine personenbezogenen Daten von Personen unter 16 Jahren. Wenn Sie unter 16 Jahre alt sind, erstellen Sie bitte kein Konto und stellen Sie keine personenbezogenen Daten bereit. Bei der Kontoerstellung und Nutzung von GH Dil werden folgende Daten gespeichert:",
       "s2i1": "Benutzername, Anzeigename und E-Mail-Adresse.",
       "s2i2": "Gehashtes Passwort (bcrypt — Ihr Klartext-Passwort wird niemals gespeichert).",
       "s2i3": "Muttersprachenpräferenz und Lerneinstellungen.",
@@ -555,7 +555,7 @@
       "s2i9": "Globale Konto-Erinnerungen und Vorlieben, die der KI-Tutor in Gesprächen lernt oder die Sie manuell hinzufügen, um künftige Interaktionen über alle Lernsprachen hinweg zu personalisieren.",
       "s2i10": "Funktionswünsche, Fehlerberichte, Kommentare und Abstimmungen, die Sie über das Feedback-Board einreichen. Nur Ihr Benutzername wird öffentlich angezeigt; alle Benutzer können veröffentlichte Vorschläge und Berichte einsehen.",
       "s3Title": "3. Verwendung Ihrer Daten",
-      "s3Intro": "Ihre Daten werden ausschließlich zur Bereitstellung des FreeLingo-Lernerlebnisses verwendet:",
+      "s3Intro": "Ihre Daten werden ausschließlich zur Bereitstellung des GH Dil-Lernerlebnisses verwendet:",
       "s3i1": "Authentifizierung und Aufrechterhaltung Ihrer Sitzung.",
       "s3i2": "Personalisierung Ihres Lernplans und Ihrer Tutor-Interaktionen.",
       "s3i3": "Verfolgung Ihres Lernfortschritts im Laufe der Zeit.",
@@ -566,13 +566,13 @@
       "s4Title": "4. Externe KI-Dienste",
       "s4Body": "Beim gehosteten Dienst werden KI-Chat, Sprachsynthese (TTS) und Sprachtranskription (STT) über die OpenAI-API bereitgestellt. Ihre Gesprächsinhalte und Audiodaten werden zur Verarbeitung an OpenAI übermittelt, gemäß der Datenschutzrichtlinie von OpenAI (openai.com/privacy). Die Zahlungsabwicklung erfolgt durch Stripe, Inc. (USA); Stripe verarbeitet Zahlungsdaten direkt und wir speichern keine Zahlungskartendaten auf unseren Servern — Ihre Transaktionsdaten unterliegen der Datenschutzrichtlinie von Stripe (stripe.com/privacy). Bei selbst gehosteten Installationen wählt der Betreiber den KI-Anbieter; standardmäßig wird eine lokale Ollama-Instanz verwendet und keine Daten verlassen den Server.",
       "s5Title": "5. Cookies, lokaler Speicher und Nutzungsanalyse",
-      "s5Body": "FreeLingo verwendet technische Cookies und Präferenz-Cookies: refresh_token (httpOnly, standardmäßig 30 Tage), um Ihre Sitzung aufrechtzuerhalten, sowie NEXT_LOCALE und LOCALE_DETECTED (bis zu einem Jahr), um die Sprache der Benutzeroberfläche zu speichern und zu verwalten. Der lokale Browserspeicher speichert außerdem Oberflächen- und Stimmeinstellungen sowie den Status von Hinweisen und Anleitungen; der Sitzungsspeicher ermöglicht die vorübergehende Fortsetzung von Funktionen. Lokale Werte bleiben gespeichert, bis die Anwendung oder Sie diese löschen; Sitzungswerte werden nach ihrer Verwendung oder beim Schließen des Tabs entfernt. Im gehosteten Dienst verwenden wir Umami, ein quelloffenes Analysewerkzeug, das wir auf derselben Infrastruktur wie FreeLingo selbst betreiben, um anonyme, aggregierte Statistiken über Nutzung und Betrieb des Dienstes zu erstellen und das Lernerlebnis zu verbessern. Diese Analyse verwendet technische Nutzungsdaten, setzt keine Cookies ein, ist nicht mit Konten verknüpft und dient weder der Erstellung individueller Profile noch Werbezwecken. Analysedaten werden weder verkauft noch an Dritte übertragen oder mit ihnen geteilt. Umami-Statistiken werden nicht automatisch gelöscht und bleiben bis zur manuellen Löschung gespeichert. Bei selbst gehosteten Installationen ist der Betreiber der Instanz für die Analysekonfiguration verantwortlich. Der Cookie-Hinweis dient der Information; beim Schließen wird lediglich gespeichert, dass er geschlossen wurde.",
+      "s5Body": "GH Dil verwendet technische Cookies und Präferenz-Cookies: refresh_token (httpOnly, standardmäßig 30 Tage), um Ihre Sitzung aufrechtzuerhalten, sowie NEXT_LOCALE und LOCALE_DETECTED (bis zu einem Jahr), um die Sprache der Benutzeroberfläche zu speichern und zu verwalten. Der lokale Browserspeicher speichert außerdem Oberflächen- und Stimmeinstellungen sowie den Status von Hinweisen und Anleitungen; der Sitzungsspeicher ermöglicht die vorübergehende Fortsetzung von Funktionen. Lokale Werte bleiben gespeichert, bis die Anwendung oder Sie diese löschen; Sitzungswerte werden nach ihrer Verwendung oder beim Schließen des Tabs entfernt. Im gehosteten Dienst verwenden wir Umami, ein quelloffenes Analysewerkzeug, das wir auf derselben Infrastruktur wie GH Dil selbst betreiben, um anonyme, aggregierte Statistiken über Nutzung und Betrieb des Dienstes zu erstellen und das Lernerlebnis zu verbessern. Diese Analyse verwendet technische Nutzungsdaten, setzt keine Cookies ein, ist nicht mit Konten verknüpft und dient weder der Erstellung individueller Profile noch Werbezwecken. Analysedaten werden weder verkauft noch an Dritte übertragen oder mit ihnen geteilt. Umami-Statistiken werden nicht automatisch gelöscht und bleiben bis zur manuellen Löschung gespeichert. Bei selbst gehosteten Installationen ist der Betreiber der Instanz für die Analysekonfiguration verantwortlich. Der Cookie-Hinweis dient der Information; beim Schließen wird lediglich gespeichert, dass er geschlossen wurde.",
       "s6Title": "6. Ihre Rechte (DSGVO)",
-      "s6Body": "Im Europäischen Wirtschaftsraum haben Sie die DSGVO-Rechte auf Auskunft, Berichtigung, Löschung, Widerspruch und Datenübertragbarkeit. Ihr Konto können Sie direkt in den Einstellungen löschen. Andere Anfragen werden manuell über den Kontakt in Abschnitt 8 bearbeitet; FreeLingo bietet kein automatisches Exportwerkzeug. Die Verarbeitung erfolgt zur Bereitstellung des Dienstes (Art. 6 Abs. 1 lit. b DSGVO). OpenAI und Stripe können Daten in den USA unter den geltenden Garantien für internationale Übermittlungen verarbeiten. Beschwerden können Sie bei Ihrer Datenschutzaufsichtsbehörde einreichen.",
+      "s6Body": "Im Europäischen Wirtschaftsraum haben Sie die DSGVO-Rechte auf Auskunft, Berichtigung, Löschung, Widerspruch und Datenübertragbarkeit. Ihr Konto können Sie direkt in den Einstellungen löschen. Andere Anfragen werden manuell über den Kontakt in Abschnitt 8 bearbeitet; GH Dil bietet kein automatisches Exportwerkzeug. Die Verarbeitung erfolgt zur Bereitstellung des Dienstes (Art. 6 Abs. 1 lit. b DSGVO). OpenAI und Stripe können Daten in den USA unter den geltenden Garantien für internationale Übermittlungen verarbeiten. Beschwerden können Sie bei Ihrer Datenschutzaufsichtsbehörde einreichen.",
       "s7Title": "7. Datenspeicherung und Löschung",
-      "s7Body": "Betriebsdaten werden gespeichert, solange Ihr Konto besteht und der gehostete Dienst aktiv ist. Erinnerungen, Sprachen oder das gesamte Konto können in den Einstellungen gelöscht werden. Bei Schließung des Dienstes kann der Betreiber nach einer angemessenen Vorankündigung alle Konten und Daten löschen. Die Löschung ist unwiderruflich. Nach Löschung der Systeme und Kopien unter Kontrolle des Betreibers bewahrt FreeLingo keine personenbezogenen Daten auf. Stripe kann Zahlungs- und Transaktionsdaten gemäß seiner eigenen Richtlinie und gesetzlichen Pflichten aufbewahren.",
+      "s7Body": "Betriebsdaten werden gespeichert, solange Ihr Konto besteht und der gehostete Dienst aktiv ist. Erinnerungen, Sprachen oder das gesamte Konto können in den Einstellungen gelöscht werden. Bei Schließung des Dienstes kann der Betreiber nach einer angemessenen Vorankündigung alle Konten und Daten löschen. Die Löschung ist unwiderruflich. Nach Löschung der Systeme und Kopien unter Kontrolle des Betreibers bewahrt GH Dil keine personenbezogenen Daten auf. Stripe kann Zahlungs- und Transaktionsdaten gemäß seiner eigenen Richtlinie und gesetzlichen Pflichten aufbewahren.",
       "s8Title": "8. Kontakt",
-      "s8Body": "Für Datenschutzfragen zum gehosteten Dienst nutzen Sie das Kontaktformular auf freelingo.app, solange es verfügbar ist. Nach der Schließung nutzen Sie den im FreeLingo-GitHub-Repository veröffentlichten Kontaktweg und veröffentlichen Sie keine personenbezogenen Daten in öffentlichen Issues. Bei selbst gehosteten Installationen wenden Sie sich an deren Administrator.",
+      "s8Body": "Für Datenschutzfragen zum gehosteten Dienst nutzen Sie das Kontaktformular auf freelingo.app, solange es verfügbar ist. Nach der Schließung nutzen Sie den im GH Dil-GitHub-Repository veröffentlichten Kontaktweg und veröffentlichen Sie keine personenbezogenen Daten in öffentlichen Issues. Bei selbst gehosteten Installationen wenden Sie sich an deren Administrator.",
       "s9Title": "9. Salvatorische Klausel",
       "s9Body": "Sollte eine Bestimmung dieser Richtlinie für ungültig oder nicht durchsetzbar befunden werden, wird diese Bestimmung im geringstmöglichen Umfang eingeschränkt und die übrigen Bestimmungen bleiben wirksam.",
       "linkTerms": "Nutzungsbedingungen",
@@ -1322,7 +1322,7 @@
     "workflowStep5": "Nutzen Sie Karteikarten, um parallel Vokabular zu üben",
     "workflowStep6": "Üben Sie freie Gespräche mit Lingu",
     "q_language": "Welche Sprache werde ich lernen?",
-    "a_language": "FreeLingo unterstützt derzeit mehrere Sprachen ({languages}), und wir werden mit der Zeit weitere hinzufügen. Wenn eine neue Sprache verfügbar ist, findest du sie unter Einstellungen → Meine Sprachen — füge sie hinzu und beginne sofort zu lernen.",
+    "a_language": "GH Dil unterstützt derzeit mehrere Sprachen ({languages}), und wir werden mit der Zeit weitere hinzufügen. Wenn eine neue Sprache verfügbar ist, findest du sie unter Einstellungen → Meine Sprachen — füge sie hinzu und beginne sofort zu lernen.",
     "q_assessment": "Was ist die Einstufung?",
     "a_assessment": "Ein adaptiver Test mit bis zu 15 Fragen aus einem Fragenkatalog für Ihre Lernsprache. Er umfasst Grammatik, Wortschatz und Leseverständnis von A1 bis C2. Das Ergebnis schätzt Ihr GER-Niveau ein und zeigt Stärken und Übungsbedarf; vor der Planerstellung können Sie das vorgeschlagene Niveau anpassen.",
     "q_studyPlan": "Was ist der Lernplan und wie erstelle ich einen?",
@@ -1341,7 +1341,7 @@
     "a_listening": "Im Bereich <strong>Listening</strong> bereitet Lingu Hörübungen vor, die zu deinem CEFR-Niveau passen. Höre dir die Audio an und beantworte 5 Fragen zum Hörverstehen. Nach dem Einreichen erhältst du deine Punktzahl (0–5), XP, die richtigen Antworten und das vollständige Transkript. Du kannst bei Bedarf neue Übungen generieren.",
     "q_reading": "Wie funktionieren die Leseübungen?",
     "a_reading": "Der <strong>Reading</strong>-Bereich generiert Texte auf deinem CEFR-Niveau — Mitteilungen, E-Mails, Artikel, Blogbeiträge und mehr. Lies den Text und beantworte 5 Multiple-Choice-Fragen. Nach dem Einreichen erhältst du deine Punktzahl (0–5) und XP. Neue Übungen können bei Bedarf generiert werden.",
-    "q_providers": "Welche KI-Anbieter unterstützt FreeLingo?",
+    "q_providers": "Welche KI-Anbieter unterstützt GH Dil?",
     "a_providers_intro": "Konfigurierbar in <code>.env</code> über <code>LLM_PROVIDER</code>:",
     "provider_ollama": "Lokal, kostenlos. Erfordert Ollama auf dem Host. Empfohlenes Modell: gemma4:e4b. Kann ohne GPU langsam sein.",
     "provider_openai": "OpenAI-Dienst mit dem vom Administrator konfigurierten Modell. Erfordert OPENAI_API_KEY und kann Nutzungskosten verursachen.",
@@ -1592,7 +1592,7 @@
     "trialHeadline": "Kostenlose Testphase",
     "trialHeadlineTrialUsed": "Premium",
     "trialTitle": "Starte mit {days} Tagen gratis",
-    "trialTitleTrialUsed": "FreeLingo Premium aktivieren",
+    "trialTitleTrialUsed": "GH Dil Premium aktivieren",
     "trialDesc": "Teste Premium-Zugang für Übungen mit Lingu, Sprachpraxis sowie Hör- und Leseübungen vor der ersten Zahlung.",
     "trialDescTrialUsed": "Wähle einen Plan für mehr Übung mit Lingu, Sprachpraxis sowie Hör- und Leseübungen.",
     "trialCtaMonthly": "Gratis testen, dann {price}€/Monat",
@@ -1623,7 +1623,7 @@
     "audioError": "Das Audio konnte nicht abgespielt werden. Versuche es erneut.",
     "step1": {
       "label": "Willkommen",
-      "title": "Willkommen bei FreeLingo",
+      "title": "Willkommen bei GH Dil",
       "desc": "Hallo! Ich bin Lingu, dein Begleiter beim Sprachenlernen. Ich zeige dir, wie wir gemeinsam lernen können."
     },
     "step2": {
@@ -1662,7 +1662,7 @@
     "paywallGamesTitle": "Mit Spielen weiterlernen",
     "paywallGamesDesc": "Dein kostenloses Kontingent ist aufgebraucht oder Spiele erfordern Premium. Vorhandene Spiele kannst du fortsetzen.",
     "paywallLabel": "Premium erforderlich",
-    "paywallTitle": "FreeLingo Premium freischalten",
+    "paywallTitle": "GH Dil Premium freischalten",
     "paywallDesc": "Starte deine {days}-tägige kostenlose Testphase und übe mehr mit Premium vor der ersten Zahlung.",
     "paywallDescTrialUsed": "Übe mehr mit Premium und prüfe den Betrag vor der Bestätigung.",
     "paywallChatTitle": "Mehr Übung mit Lingu",
@@ -1683,7 +1683,7 @@
     "planYearly": "Bester Wert · {price}€/Jahr · 2 Monate gratis →",
     "checkoutError": "Der Zahlungsvorgang konnte nicht gestartet werden. Bitte versuche es erneut.",
     "pricingTitle": "Tarife und Preise",
-    "pricingContext": "Diese Tarife gelten für diese Installation. Self-Hosting erfordert kein FreeLingo-Cloud-Abo; der Administrator konfiguriert Zugang und Limits.",
+    "pricingContext": "Diese Tarife gelten für diese Installation. Self-Hosting erfordert kein GH Dil-Cloud-Abo; der Administrator konfiguriert Zugang und Limits.",
     "pricingDesc": "Zusätzliche Testphase beim Abo-Abschluss: {days} Tage · Karte erforderlich · danach gilt der Tarifpreis",
     "pricingDescTrialUsed": "Monatliches oder jährliches kostenpflichtiges Abo ab Abschluss. Jederzeit kündbar.",
     "planMonthlyName": "Monatlich",
@@ -1715,7 +1715,7 @@
       "l5": "7 Tage voller Zugang"
     },
     "successLabel": "Abonnement bestätigt",
-    "successTitle": "Willkommen bei FreeLingo Premium!",
+    "successTitle": "Willkommen bei GH Dil Premium!",
     "successDesc": "Dein Abonnement ist jetzt aktiv. Genieße Premium-Zugang im Rahmen der allgemeinen Limits deines Kontos.",
     "successCheckingLabel": "Abonnement wird bestätigt",
     "successCheckingTitle": "Abonnement wird geprüft",
@@ -1883,7 +1883,7 @@
     },
     "entry5": {
       "label": "Ein flüssigeres Erlebnis",
-      "desc": "Außerdem haben wir kleine Fehler behoben und an einigen Details gefeilt, damit dir das tägliche Lernen mit FreeLingo noch mehr Freude macht."
+      "desc": "Außerdem haben wir kleine Fehler behoben und an einigen Details gefeilt, damit dir das tägliche Lernen mit GH Dil noch mehr Freude macht."
     }
   },
   "contact": {
@@ -2020,7 +2020,7 @@
     "statusError": "Wir konnten deinen Bewertungsstatus nicht prüfen. Bitte versuche es später erneut.",
     "ratingRequiredError": "Bitte wähle vor dem Absenden eine Bewertung aus.",
     "saveError": "Wir konnten deine Bewertung nicht speichern. Bitte versuche es erneut.",
-    "eyebrow": "FreeLingo bewerten",
+    "eyebrow": "GH Dil bewerten",
     "title": "Wie war deine Erfahrung?",
     "closeLabel": "Bewertungsdialog schließen",
     "checking": "Bewertungsstatus wird geprüft...",
@@ -2036,7 +2036,7 @@
   "landingReviews": {
     "eyebrow": "Geschichten von Lernenden",
     "title": "Lernen wirkt echter, wenn du selbst davon erzählst",
-    "subtitle": "Bewertungen von Lernenden, die bereits mit Lingu auf FreeLingo üben.",
+    "subtitle": "Bewertungen von Lernenden, die bereits mit Lingu auf GH Dil üben.",
     "averageLabel": "{average}/5 · {count, plural, one {# Bewertung} other {# Bewertungen}}",
     "ratingCount": "{count, plural, one {# Bewertung} other {# Bewertungen}}",
     "carouselLabel": "Bewertungen von Lernenden",
@@ -2048,7 +2048,7 @@
     "readLess": "Weniger anzeigen",
     "learningLanguage": "Lernt {language}",
     "starsLabel": "{rating} von 5 Sternen",
-    "ratingOnly": "Verifizierte FreeLingo-Bewertung."
+    "ratingOnly": "Verifizierte GH Dil-Bewertung."
   },
   "adminReviews": {
     "title": "Bewertungen",

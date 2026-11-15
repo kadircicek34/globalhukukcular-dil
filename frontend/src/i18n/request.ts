@@ -6,7 +6,7 @@ function resolveLocale(raw: string | undefined): Locale {
   if (raw && (SUPPORTED_LOCALES as readonly string[]).includes(raw)) {
     return raw as Locale
   }
-  return 'en'
+  return 'tr'
 }
 
 export default getRequestConfig(async () => {
@@ -23,8 +23,8 @@ export default getRequestConfig(async () => {
   try {
     messages = (await import(`../../messages/${locale}.json`)).default
   } catch {
-    // Fallback to English if locale file is missing
-    const defaultLocale = 'en'
+    // Fallback to Turkish if locale file is missing
+    const defaultLocale = 'tr'
     messages = (await import(`../../messages/${defaultLocale}.json`)).default
   }
 

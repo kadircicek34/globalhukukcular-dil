@@ -33,6 +33,7 @@ vi.mock('next/font/google', () => ({
   Noto_Sans_JP: () => ({ variable: 'ja' }),
   Noto_Sans_KR: () => ({ variable: 'ko' }),
   Noto_Sans_SC: () => ({ variable: 'zh' }),
+  Cormorant_Garamond: () => ({ variable: 'cormorant' }),
 }))
 
 import { metadata as rootMetadata } from '@/app/layout'
@@ -64,14 +65,17 @@ describe('public SEO contract', () => {
       expect(
         new Set(pages.map((page) => JSON.stringify(page.title))).size
       ).toBe(3)
-      for (const page of pages) {
+      for (const [index, page] of pages.entries()) {
         expect(page.robots).toEqual({ index: true, follow: true })
         expect(page.alternates?.languages).toBeUndefined()
         expect(page.openGraph).toMatchObject({
           url: page.alternates?.canonical,
           description: page.description,
-          siteName: 'FreeLingo',
-          locale: expect.stringMatching(new RegExp(`^${locale}_[A-Z]{2}$`)),
+          siteName: 'GH Dil',
+          locale:
+            index === 0
+              ? 'tr_TR'
+              : expect.stringMatching(new RegExp(`^${locale}_[A-Z]{2}$`)),
         })
         expect(page.twitter).toMatchObject({
           card: 'summary_large_image',
@@ -83,7 +87,9 @@ describe('public SEO contract', () => {
   )
 
   it('excludes account pages and avoids fabricated sitemap freshness', async () => {
-    expect(String(rootMetadata.metadataBase)).toBe('https://freelingo.app/')
+    expect(String(rootMetadata.metadataBase)).toBe(
+      'https://dil.globalhukukcular.com/'
+    )
     expect(rootMetadata.robots).toEqual({ index: false, follow: true })
     expect(rootMetadata.alternates).toBeUndefined()
     expect(rootMetadata.openGraph).toBeUndefined()
@@ -140,7 +146,9 @@ describe('public SEO contract', () => {
         disallowed.some((prefix) => prefix && path.startsWith(prefix))
       ).toBe(false)
     }
-    expect(robots().sitemap).toBe('https://freelingo.app/sitemap.xml')
+    expect(robots().sitemap).toBe(
+      'https://dil.globalhukukcular.com/sitemap.xml'
+    )
     expect(disallowed).toContain('/api/')
     const files = readdirSync(app, {
       recursive: true,

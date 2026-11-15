@@ -1,6 +1,18 @@
 import type { Metadata } from 'next'
 
-export const SITE_URL = 'https://freelingo.app'
+const DEFAULT_SITE_URL = 'https://dil.globalhukukcular.com'
+
+function resolveSiteUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim()
+  if (!configured) return DEFAULT_SITE_URL
+  try {
+    return new URL(configured).origin
+  } catch {
+    return DEFAULT_SITE_URL
+  }
+}
+
+export const SITE_URL = resolveSiteUrl()
 
 // Only canonical, public content belongs here. Account and app pages inherit noindex.
 export const INDEXABLE_PATHS = ['/', '/privacy', '/terms'] as const
@@ -41,7 +53,7 @@ export function createPublicMetadata({
     url: new URL('/og-image-v2.png', SITE_URL).href,
     width: 1200,
     height: 630,
-    alt: 'FreeLingo',
+    alt: 'GH Dil',
   }
 
   return {
@@ -51,7 +63,7 @@ export function createPublicMetadata({
     robots: { index: true, follow: true },
     openGraph: {
       type: 'website',
-      siteName: 'FreeLingo',
+      siteName: 'GH Dil',
       locale: OPEN_GRAPH_LOCALES[locale],
       url,
       title,

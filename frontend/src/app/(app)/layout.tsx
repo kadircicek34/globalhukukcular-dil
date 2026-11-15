@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useAuthStore, isSubscribed } from '@/store/auth'
@@ -193,10 +194,21 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside className="border-fl-border bg-fl-bg hidden w-52 shrink-0 flex-col border-r px-0 py-0 md:flex">
         {/* Logo area */}
-        <div className="border-fl-border flex items-center gap-2 border-b px-5 py-5">
-          <span className="text-fl-label text-fl-muted-2">●</span>
-          <span className="text-fl-fg font-code text-sm font-bold tracking-widest uppercase">
-            FreeLingo
+        <div className="border-fl-border flex items-center gap-2.5 border-b px-5 py-4">
+          <Image
+            src="/ghdil-logo.png"
+            alt=""
+            width={32}
+            height={32}
+            className="ring-fl-accent/40 size-8 shrink-0 rounded-full ring-1"
+          />
+          <span className="min-w-0">
+            <span className="text-fl-fg font-code block text-sm leading-tight font-bold tracking-[0.18em] uppercase">
+              GH Dil
+            </span>
+            <span className="text-fl-muted-3 mt-0.5 block truncate font-sans text-[9px] tracking-[0.08em] uppercase">
+              Global Hukukçular Derneği
+            </span>
           </span>
         </div>
 
@@ -392,8 +404,22 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       {/* Mobile top bar */}
       <div className="border-fl-border bg-fl-bg fixed top-0 right-0 left-0 z-50 border-b md:hidden">
         <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <span className="text-fl-fg font-code text-xs font-bold tracking-widest uppercase">
-            FreeLingo
+          <span className="flex min-w-0 items-center gap-2">
+            <Image
+              src="/ghdil-logo.png"
+              alt=""
+              width={24}
+              height={24}
+              className="size-6 shrink-0 rounded-full"
+            />
+            <span className="min-w-0">
+              <span className="text-fl-fg font-code block text-xs leading-tight font-bold tracking-[0.16em] uppercase">
+                GH Dil
+              </span>
+              <span className="text-fl-muted-3 block truncate font-sans text-[8px] tracking-[0.06em] uppercase">
+                Global Hukukçular Derneği
+              </span>
+            </span>
           </span>
           {showPremiumAction && (
             <Link

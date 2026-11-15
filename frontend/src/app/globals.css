@@ -8,16 +8,18 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
+  /* GH Dil editorial display face, reserved for the public brand surface. */
+  --font-display: var(--font-cormorant);
   /* Legacy UI alias: existing font-mono classes follow the interface font. */
   --font-mono: var(--font-geist-sans);
   --font-heading: var(--font-geist-sans);
   /* Explicit fixed-width font for branding and technical content. */
   --font-code: var(--font-geist-mono);
-  /* FreeLingo semantic font-size tokens */
+  /* GH Dil semantic font-size tokens */
   --text-fl-hint: 10px;
   --text-fl-label: 11px;
   --text-fl-caption: 12px;
-  /* FreeLingo semantic color tokens */
+  /* GH Dil semantic color tokens */
   --color-fl-bg: var(--fl-bg);
   --color-fl-bg-alt: var(--fl-bg-alt);
   --color-fl-surface: var(--fl-surface);
@@ -33,14 +35,14 @@
   --color-fl-fg-2: var(--fl-fg-2);
   --color-fl-fg: var(--fl-fg);
   --color-fl-fg-bright: var(--fl-fg-bright);
-  /* FreeLingo error/danger tokens */
+  /* GH Dil error/danger tokens */
   --color-fl-error: var(--fl-error);
   --color-fl-error-fg: var(--fl-error-fg);
   --color-fl-error-dim: var(--fl-error-dim);
   --color-fl-error-hover: var(--fl-error-hover);
   --color-fl-success: var(--fl-success);
   --color-fl-warning: var(--fl-warning);
-  /* FreeLingo accent tokens */
+  /* GH Dil accent tokens */
   --color-fl-accent: var(--fl-accent);
   --color-fl-accent-fg: var(--fl-accent-fg);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -77,57 +79,57 @@
 }
 
 :root {
-  /* FreeLingo semantic tokens — dark (default) */
-  --fl-bg: #0c1316;
-  --fl-bg-alt: #0d0d0d;
-  --fl-surface: #131d22;
-  --fl-surface-2: #1a1a1a;
-  --fl-border: #29383f;
-  --fl-border-2: #444444;
-  --fl-muted-4: #666666;
-  --fl-muted-3: #777777;
-  --fl-muted-2: #888888;
-  --fl-muted-1: #999999;
-  --fl-muted-0: #aaaaaa;
-  --fl-fg-2: #e0e0e0;
-  --fl-fg: #f5f5f5;
+  /* GH Dil semantic tokens — navy and bronze, dark (default) */
+  --fl-bg: #0b172d;
+  --fl-bg-alt: #081226;
+  --fl-surface: #122443;
+  --fl-surface-2: #1a3054;
+  --fl-border: #2c4368;
+  --fl-border-2: #45618b;
+  --fl-muted-4: #71829c;
+  --fl-muted-3: #8494ad;
+  --fl-muted-2: #9aa9bf;
+  --fl-muted-1: #b8c4d6;
+  --fl-muted-0: #d0d9e6;
+  --fl-fg-2: #e5e9f0;
+  --fl-fg: #f7f3ea;
   --fl-fg-bright: #ffffff;
-  --fl-error: #ff3b3b;
-  --fl-error-fg: #ff6b6b;
-  --fl-error-dim: #cc6666;
-  --fl-error-hover: #ff5555;
-  --fl-success: #4ade80;
-  --fl-warning: #fbbf24;
-  --fl-accent: #75b7c5;
-  --fl-accent-fg: #0a0a0a;
+  --fl-error: #ff6b6b;
+  --fl-error-fg: #ff8a8a;
+  --fl-error-dim: #d98a8a;
+  --fl-error-hover: #ff8585;
+  --fl-success: #6ee7a8;
+  --fl-warning: #f2c66d;
+  --fl-accent: #d6b36a;
+  --fl-accent-fg: #101f3a;
   /* shadcn tokens */
   --background: var(--fl-bg);
-  --foreground: #f5f5f5;
+  --foreground: #f7f3ea;
   --card: var(--fl-surface);
-  --card-foreground: #f5f5f5;
+  --card-foreground: #f7f3ea;
   --popover: var(--fl-surface);
-  --popover-foreground: #f5f5f5;
-  --primary: #f5f5f5;
+  --popover-foreground: #f7f3ea;
+  --primary: #f7f3ea;
   --primary-foreground: var(--fl-bg);
-  --secondary: #1a1a1a;
-  --secondary-foreground: #f5f5f5;
-  --muted: #1a1a1a;
-  --muted-foreground: #666666;
-  --accent: #1a1a1a;
-  --accent-foreground: #f5f5f5;
-  --destructive: #ff3b3b;
+  --secondary: #1a3054;
+  --secondary-foreground: #f7f3ea;
+  --muted: #1a3054;
+  --muted-foreground: #9aa9bf;
+  --accent: #1a3054;
+  --accent-foreground: #f7f3ea;
+  --destructive: #ff6b6b;
   --border: var(--fl-border);
-  --input: #1a1a1a;
-  --ring: #444444;
+  --input: #1a3054;
+  --ring: #45618b;
   --radius: 0px;
   --sidebar: var(--fl-bg);
-  --sidebar-foreground: #f5f5f5;
-  --sidebar-primary: #f5f5f5;
+  --sidebar-foreground: #f7f3ea;
+  --sidebar-primary: #f7f3ea;
   --sidebar-primary-foreground: var(--fl-bg);
-  --sidebar-accent: #1a1a1a;
-  --sidebar-accent-foreground: #f5f5f5;
+  --sidebar-accent: #1a3054;
+  --sidebar-accent-foreground: #f7f3ea;
   --sidebar-border: var(--fl-border);
-  --sidebar-ring: #444444;
+  --sidebar-ring: #45618b;
 }
 
 @layer base {
@@ -216,54 +218,54 @@
 
 /* ── Light theme ── */
 html[data-theme='light'] {
-  --fl-bg: #f2f6f7;
-  --fl-bg-alt: #f0f0f0;
-  --fl-surface: #fbfcfc;
-  --fl-surface-2: #eeeeee;
-  --fl-border: #d7e1e5;
-  --fl-border-2: #aaaaaa;
-  --fl-muted-4: #999999;
-  --fl-muted-3: #888888;
-  --fl-muted-2: #777777;
-  --fl-muted-1: #666666;
-  --fl-muted-0: #555555;
-  --fl-fg-2: #1a1a1a;
-  --fl-fg: #0a0a0a;
+  --fl-bg: #f7f3ea;
+  --fl-bg-alt: #f1ebdd;
+  --fl-surface: #fffdf8;
+  --fl-surface-2: #ece4d3;
+  --fl-border: #d6c9ae;
+  --fl-border-2: #b09a72;
+  --fl-muted-4: #766d5d;
+  --fl-muted-3: #6b6354;
+  --fl-muted-2: #5a5346;
+  --fl-muted-1: #464137;
+  --fl-muted-0: #34302a;
+  --fl-fg-2: #1f2c44;
+  --fl-fg: #0f1e3d;
   --fl-fg-bright: #000000;
-  --fl-error: #e03030;
-  --fl-error-fg: #cc3333;
-  --fl-error-dim: #994444;
-  --fl-error-hover: #c02020;
-  --fl-success: #15803d;
-  --fl-warning: #92400e;
-  --fl-accent: #286779;
-  --fl-accent-fg: #ffffff;
+  --fl-error: #b42323;
+  --fl-error-fg: #9b1c1c;
+  --fl-error-dim: #7f2d2d;
+  --fl-error-hover: #8f1d1d;
+  --fl-success: #1f6b45;
+  --fl-warning: #7a4f10;
+  --fl-accent: #8a6a24;
+  --fl-accent-fg: #fffdf8;
   /* shadcn token overrides (light) */
   --background: var(--fl-bg);
-  --foreground: #0a0a0a;
+  --foreground: #0f1e3d;
   --card: var(--fl-surface);
-  --card-foreground: #0a0a0a;
+  --card-foreground: #0f1e3d;
   --popover: var(--fl-surface);
-  --popover-foreground: #0a0a0a;
-  --primary: #0a0a0a;
+  --popover-foreground: #0f1e3d;
+  --primary: #0f1e3d;
   --primary-foreground: var(--fl-bg);
-  --secondary: #eeeeee;
-  --secondary-foreground: #0a0a0a;
-  --muted: #eeeeee;
-  --muted-foreground: #666666;
-  --accent: #eeeeee;
-  --accent-foreground: #0a0a0a;
+  --secondary: #ece4d3;
+  --secondary-foreground: #0f1e3d;
+  --muted: #ece4d3;
+  --muted-foreground: #5a5346;
+  --accent: #ece4d3;
+  --accent-foreground: #0f1e3d;
   --border: var(--fl-border);
-  --input: #eeeeee;
-  --ring: #aaaaaa;
+  --input: #ece4d3;
+  --ring: #b09a72;
   --sidebar: var(--fl-bg);
-  --sidebar-foreground: #0a0a0a;
-  --sidebar-primary: #0a0a0a;
+  --sidebar-foreground: #0f1e3d;
+  --sidebar-primary: #0f1e3d;
   --sidebar-primary-foreground: var(--fl-bg);
-  --sidebar-accent: #eeeeee;
-  --sidebar-accent-foreground: #0a0a0a;
+  --sidebar-accent: #ece4d3;
+  --sidebar-accent-foreground: #0f1e3d;
   --sidebar-border: var(--fl-border);
-  --sidebar-ring: #aaaaaa;
+  --sidebar-ring: #b09a72;
 }
 
 /* ── Avatar halo keyframes ── */
@@ -325,4 +327,73 @@ html[data-theme='light'] {
 
 .animate-float {
   animation: float 3s ease-in-out infinite;
+}
+
+/* ── GH Dil public brand surface ── */
+.gh-landing ::selection {
+  background: #c9a24b;
+  color: #0f1e3d;
+}
+
+@keyframes gh-rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gh-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+.gh-rise {
+  animation: gh-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.gh-delay-2 {
+  animation-delay: 0.16s;
+}
+
+.gh-float {
+  animation: gh-float 7s ease-in-out infinite;
+}
+
+.gh-reveal {
+  animation: gh-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-timeline: view();
+  animation-range: entry 5% cover 24%;
+}
+
+.gh-glass {
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gh-rise,
+  .gh-reveal,
+  .gh-float,
+  .animate-float,
+  .reveal {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
 }

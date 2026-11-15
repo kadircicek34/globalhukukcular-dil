@@ -26,7 +26,7 @@ export default function GlobalError({
         <div className="border-fl-border flex items-center gap-3 border-b px-8 py-6">
           <span className="text-fl-muted-2 font-mono text-sm">●</span>
           <span className="text-fl-muted-2 font-code text-xs tracking-widest uppercase">
-            FreeLingo
+            GH Dil
           </span>
         </div>
 
@@ -71,7 +71,7 @@ export default function GlobalError({
         {/* Footer */}
         <div className="border-fl-border border-t px-8 py-4">
           <p className="text-fl-hint text-fl-muted-2 text-center font-mono">
-            &copy; FreeLingo
+            &copy; GH Dil
           </p>
         </div>
       </div>
