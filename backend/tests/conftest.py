@@ -10,6 +10,9 @@ os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["SECRET_KEY"] = "test-secret-key-for-pytest-ci-32b"
 os.environ["RATE_LIMIT_ENABLED"] = "false"
 os.environ["REVENUECAT_ENABLED"] = "false"
+# Existing auth tests exercise the invite/legacy registration path; membership tests
+# opt back into the production gate explicitly.
+os.environ["MEMBERSHIP_REQUIRED"] = "false"
 
 import pytest
 import pytest_asyncio

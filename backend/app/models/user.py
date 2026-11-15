@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.config import settings
@@ -82,6 +82,24 @@ class User(Base):
     freemium_trial_ends_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     freemium_trial_used: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
+    # GH Dil membership application. Existing rows are approved by default.
+    membership_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="approved", server_default="approved", index=True
+    )
+    birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    law_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    law_school: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    graduation_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    e_devlet_document_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    e_devlet_document_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    e_devlet_document_mime: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    kvkk_accepted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    application_submitted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    membership_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    membership_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    membership_reviewed_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
     avatar: Mapped[str | None] = mapped_column(Text, nullable=True)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
     learning_goals: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array string
@@ -90,3 +108,11 @@ class User(Base):
         DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None)
     )
     last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    @property
+    def document_name(self) -> str | None:
+        return self.e_devlet_document_name
+
+    @property
+    def document_mime(self) -> str | None:
+        return self.e_devlet_document_mime

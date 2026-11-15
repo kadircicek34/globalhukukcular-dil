@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     ALLOW_REGISTRATION: bool = True
+    # GH Dil: public signup must go through the membership application flow.
+    MEMBERSHIP_REQUIRED: bool = True
+    MEMBERSHIP_DOCS_DIR: str = "/app/membership_docs"
     FIRST_USER_IS_ADMIN: bool = True
     BLOCKED_EMAIL_DOMAINS: list[str] = []
     LLM_PROVIDER: str = "ollama"

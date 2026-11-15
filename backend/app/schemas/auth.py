@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 PASSWORD_PATTERN = re.compile(r"^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{10,25}$")
 
@@ -135,6 +135,12 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=25)
 
 
+class MembershipApplicationResponse(BaseModel):
+    status: str
+    application_id: int
+    message: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"  # noqa: S105
@@ -158,6 +164,13 @@ class UserResponse(BaseModel):
     ui_locale: str | None = None
     is_active: bool
     is_verified: bool
+    membership_status: str = "approved"
+    birth_date: date | None = None
+    law_status: str | None = None
+    law_school: str | None = None
+    graduation_year: int | None = None
+    phone: str | None = None
+    application_submitted_at: datetime | None = None
     conversation_max_duration: int
     conversation_inactivity_timeout: int
     conversation_speech_pause: int = 0
