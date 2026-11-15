@@ -1,0 +1,432 @@
+---
+description: "Current-state specification for voice conversation: startup, WebSocket protocol, VAD capture, STT-LLM-TTS turns, playback, persistence, memory, quotas, timeouts, and recovery."
+applyTo: "backend/app/routers/conversation.py, backend/app/services/conversation_pipeline.py, backend/app/services/{assessment_voice_trial,quota_service,memory_service}.py, backend/app/models/{conversation,chat_history,llm_usage}.py, frontend/src/app/(app)/conversation/**, frontend/src/components/conversation/**, frontend/src/lib/{audio,conversation-vad,conversation-ws}.ts, frontend/public/vad/**, frontend/scripts/{patch-vad,copy-vad-models}.js, frontend/package.json"
+---
+
+# Voice Conversation
+
+## Purpose
+
+Voice conversation lets the learner speak through browser Voice Activity Detection (VAD) and receive
+spoken responses from Lingu over one WebSocket connection. The backend orchestrates STT, LLM, memory,
+TTS, quota tracking, timeout enforcement, and transcript persistence.
+
+The browser sends one complete WAV frame per accepted utterance. Audio is not streamed continuously
+from the microphone to the backend.
+
+## Startup and connection
+
+The frontend startup order is:
+
+1. Wait for VAD initialization.
+2. Create session and attempt identities plus an AudioContext.
+3. Request and own a mono microphone stream.
+4. Supply that stream to VAD and await serialized `vad.start()`.
+5. Call `POST /api/conversation/warmup` with a 75-second abortable client timeout.
+6. Refresh the access token reference.
+7. Open `/ws/conversation` and send the authentication payload.
+
+Warmup requires authentication, voice access, and absence of maintenance for non-admin users. TTS
+and STT probes run in parallel with a shared 60-second budget. Individual failures and exhaustion of
+that budget are logged; unfinished probes are cancelled at the deadline. The endpoint returns
+`status: "ready"` after these best-effort probes, not a strict provider-health guarantee.
+
+The Next.js warmup proxy has a 70-second deadline, forwards authentication and the optional trial
+token, and propagates client cancellation. It preserves backend HTTP errors and returns 504 if its
+own deadline expires, avoiding the generic rewrite's 30-second limit.
+
+The frontend remains in `warming` while awaiting the response and offers a stop control. Stopping
+or unmounting aborts the client request and clears its timer; success and failure also clear the
+timer. Attempt identities prevent late responses from opening a WebSocket or changing a newer
+session. A client timeout aborts the request and releases session audio resources. Client timeout,
+network failure details, and HTTP status failures are logged independently of audio-debug logging;
+the interface displays the localized connection error without transport diagnostics. Failed attempts
+can be restarted manually. Manual start and restart controls invoke the session callback without a
+DOM event argument, preserving supplied chat context in the next authentication payload.
+
+After accepting the WebSocket handshake, the backend waits up to ten seconds for the first JSON
+frame. The payload can contain token, initial context, TTS voice, target language, post-assessment
+demo token, and conversation ID. A missing or invalid token produces `auth_failed` and close code
+1008. The backend does not currently require the payload's `type` field to equal `auth`.
+
+The session fixes user, plan, target language, CEFR level, native language, voice, limits, and access
+mode at connection time. They are not refreshed globally during the session, except memories and
+native language before each normal user turn.
+
+The frontend resolves voice preferences for the selected provider: `tts_voice` for OpenAI and
+`gemini_tts_voice` (`female`/`male`) for Gemini. Invalid WebSocket voice choices fall back to the
+configured provider default for both OpenAI and Gemini; local TTS uses its configured voice.
+
+Changing the authenticated user or authentication session invalidates pending startup and ends an
+active browser voice session: microphone tracks, warmup requests, WebSocket, and playback are released.
+Late microphone permissions and callbacks cannot resume the previous session. Refreshing the access
+token within the same authentication session does not interrupt conversation.
+
+Suggested conversation topics supply a learner message about the selected topic without naming a
+practice language. The session's resolved target language remains authoritative; starters do not
+request English when a different target language is selected.
+
+## Language and plan resolution
+
+For free conversation, the router resolves the client-requested language first. Only omission or null
+selects the user's active language, or `en-GB` if no active language exists. The resolved value must be
+an exact canonical supported code; empty, unknown, noncanonical or non-string values emit
+`invalid_target_language` and close 1008 before general session quota consumption or conversation
+creation. This uses the supported set, not the operator-enabled subset used for adding languages and
+creating plans.
+
+The router looks up an active plan belonging to the authenticated user and the resolved language,
+checking both the owning track and the persisted plan. A matching plan supplies the session language,
+CEFR level and provenance. Without one, the session retains that language with CEFR A2 and a null plan
+reference, even when another language has an active plan. It does not create a language track or plan.
+
+The pipeline converts the resolved target language to ISO 639-1 and declares it in every STT call.
+TTS receives the full resolved BCP-47 target language so regional distinctions such as `en-GB` and
+`en-US` remain available. Gemini supplies explicit regional language in `speech_config`; OpenAI uses
+it in pronunciation instructions for `gpt-4o-mini-tts` and its snapshots. Legacy/unknown OpenAI
+models and Kokoro ignore it.
+
+### Lesson practice context
+
+Authentication may include `lesson_id`, a JSON integer in `1..2147483647` (booleans, fractional
+numbers, strings, null, and out-of-range values are rejected before lesson SQL lookup). The backend loads a completed lesson through its owned plan
+and language track. Invalid, missing, foreign, or incomplete lessons produce
+`lesson_practice_unavailable` and close code 1008 before general session quotas are consumed.
+
+For this mode, the lesson's persisted plan determines language, CEFR level, and plan provenance,
+regardless of active language, active plan, or the client's `target_language`. Client `context` and
+`conversation_id` are ignored: every start creates a separate practice conversation. Normal voice
+access, maintenance, warmup, quotas, timeouts, microphone, playback, and manual stop behavior apply.
+
+`lesson_voice_practice.py` supplies bounded, escaped reference data from the lesson title, content,
+scheduled objectives, vocabulary, grammar references, and up to eight answered exercises ordered by
+score then ID. Exercise questions and explanations use the same read-time legacy fill-blank
+normalization as lesson detail, without mutating stored exercises; both fields are bounded in the
+context. This snapshot is included in the system prompt for the greeting, normal turns, memory
+refreshes, and no-tools fallbacks; trimming turn history cannot remove it. Lingu guides questions and
+help around the lesson and can suggest that the main objectives have been practised. This is ordinary
+conversational text, not a session-end event or a persisted completion flag. The learner can continue
+or stop, subject to the existing voice limits.
+
+The frontend entry `/conversation?lesson={id}` loads lesson metadata before using the existing
+automatic start flow. It shows the topic title and hides unrelated conversation starters for this
+mode. The lesson entry button first uses the shared confirmation dialog. All entry/error copy is
+localized under `lessonPractice`.
+
+The title uses rich interpolation: its localized prefix carries the interface locale, while only the
+lesson topic is rendered through `TargetLanguageText` with the learned language.
+
+Saving a selected transcript word sends `lesson_id` through the existing `/api/flashcards/from-word`
+endpoint. The backend rechecks ownership and completion and derives lookup language, level,
+deduplication, and storage from that lesson's plan. This also applies to historical plans and when
+the active language changes elsewhere. Missing or inaccessible lessons fail without active-plan
+fallback. Voice sessions without a lesson retain the existing word-save contract.
+
+## Client-to-server protocol
+
+- Initial JSON: authentication and optional session context.
+- Binary: WAV PCM16 mono at 16 kHz for one detected utterance.
+- `{ "type": "interrupt" }`: cancels the active backend task.
+- `client_event/session_close_request`: requests a clean manual or route-unload close.
+
+Initial context accepts non-empty `user` and `assistant` messages. The router inspects at most 20
+items and the pipeline starts with the last 10 accepted messages.
+
+## Server-to-client protocol
+
+- `status`: `transcribing`, `thinking`, `speaking`, or `listening`, with `turn_id`; the current
+  pipeline does not emit `speaking`.
+- `transcript`: final user or assistant text with `turn_id`.
+- Binary: one synthesized assistant audio fragment, without turn metadata; native WAV for Gemini
+  or MP3 for local/OpenAI. Provider selection does not add protocol frames or alter turn sequencing.
+- `barge_in`: active generation was cancelled by new binary input.
+- `interrupted`: acknowledgement of an explicit interrupt; current frontend ignores it.
+- `turn_complete`: backend work finished; browser playback may still be draining.
+- `memory_updated`: one memory was committed for the turn.
+- `session_warning`: maximum-duration or inactivity warning with remaining seconds.
+- `session_end`: maximum-duration or inactivity termination.
+- `error`: code, optional message, and optional turn ID.
+
+Voice-access errors retain `code=subscription_required` and carry additive reason/feature metadata;
+quota balance fields are present only when the check returned them. Warmup preserves its legacy
+HTTP detail string. Exact envelopes and units belong to `api-endpoints.instructions.md`.
+
+All backend sends share one lock so pipeline work, timeout watchers, and close operations do not write
+concurrently.
+
+## Turn pipeline
+
+The initial greeting is a cancellable task started while the receive loop is already active. It uses
+memory context loaded at connection, does not offer memory tools, and persists only the assistant
+message after successful completion. Greeting failure is logged without a client error.
+Cancelling the greeting preserves initial chat/topic context. An unfinished normal turn rolls back
+only its own learner message in memory, including cancellation during transcription, memory refresh,
+generation, or synthesis; earlier context is retained.
+
+The voice system prompt requires plain text without Markdown formatting for spoken replies and
+transcripts. The shared output policy in `prompts.instructions.md` also applies to greetings,
+lesson-linked practice, and tool-free fallbacks.
+
+The conversational prompt contract is defined in `prompts.instructions.md` (Tutor prompts). Openings
+use supplied topic or chat context, and ordinary turns develop the learner's contributions with
+selective corrections, varied responses and optional follow-up questions. These are model instructions,
+not output validation. A conversational farewell does not close the WebSocket or emit a session-end event.
+
+Voice remains in the target language by default. On a learning-related request for help, explanation,
+translation, or an explicit indication of incomprehension, Lingu may give one or two brief sentences in
+the profile's native language and returns naturally to the target language in the same reply.
+Examples and follow-up questions are optional aids under the prompt policy, not a fixed response sequence.
+This does not change session language or STT/TTS context. Speaking another language, hesitation or an
+error alone does not trigger native help. The same policy covers lesson practice and tool-free fallbacks;
+target-language overlays apply only to target-language passages. The prompt policy is not a guarantee
+that target-language STT will correctly recognize a request spoken in another language.
+
+A normal turn:
+
+1. Assigns a turn ID and emits `transcribing`.
+2. Transcribes the WAV with the explicit session language.
+3. Returns to `listening` without LLM, completion event, or persistence when STT is empty.
+4. Emits the final user transcript and appends it to in-memory context.
+5. Refreshes global memories and native language best-effort.
+6. Builds the prompt from system context and up to the latest 40 messages, including the current
+   learner message. Greetings and tool-free fallbacks use the same history limit; the greeting's
+   session-start trigger is additional. Older messages are not summarized into the prompt.
+7. Consumes the complete normalized LLM stream, including at most one native memory-tool round.
+8. Splits completed assistant text on full stops, keeping dots between decimal digits and consecutive
+   dot runs (ellipses) inside the same fragment. Fragments without any Unicode letter or number are
+   not sent to TTS; the complete transcript is preserved, including for text-only output.
+9. Synthesizes fragments sequentially, with one retry per failed fragment.
+10. Sends the first successful audio before the complete assistant transcript.
+11. Sends remaining audio in order.
+12. Persists the completed user and assistant messages best-effort.
+13. Emits `listening` and `turn_complete`.
+
+TTS does not overlap with LLM generation: synthesis starts after the full visible response is
+collected. If every fragment fails TTS, the complete transcript is sent as a successful text-only
+fallback and the turn is persisted. If sending audio over the socket fails after output begins, the
+turn emits `tts_failed` and is not persisted.
+
+## VAD and utterance filtering
+
+The frontend uses `@ricky0123/vad-react`, Silero VAD v5, and assets served from `/vad/`. ONNX runtime
+is configured with one thread. The v5 adapter processes 512-sample frames at 16 kHz, prepending
+64 samples of context from the preceding frame for inference and clearing that context on reset.
+
+`frontend/package.json` runs `scripts/patch-vad.js` before copying VAD assets during `postinstall`.
+The patch targets `@ricky0123/vad-web` 0.0.31 and `@ricky0123/vad-react` 0.0.37. It verifies both
+package versions and source hashes before writing either package, accepts repeated application, and
+fails installation on unexpected contents. Dependency upgrades require reviewing this contract.
+
+The patched lifecycle shares pending starts and makes destruction idempotent. Destruction waits for
+an in-flight start/resume, safely releases instances that never started, disconnects the VAD node,
+releases the model, and closes only an owned AudioContext. Cancelled React initialization ignores late
+successes and failures; asynchronous destruction errors are caught and logged.
+
+End-of-turn pause is either the user's explicit 1, 2, or 3 seconds or the CEFR-derived automatic
+value:
+
+- A1/A2: 1800 ms.
+- B1/B2: 1500 ms.
+- C1/C2: 1200 ms.
+- No level: 1500 ms.
+
+Accepted speech also passes duration, RMS, and speech-start checks. The existing duration check uses
+the complete VAD segment: its minimum is 900 ms and becomes 1200 ms during an assistant turn. VAD also
+enforces its own minimum speech-frame count. The RMS check uses only frames classified as speech at
+the configured positive probability threshold of 0.3, excluding pre-speech padding and non-speech
+frames. Its minimum remains 0.012, independently of the chosen end-of-turn pause. The complete segment,
+including padding, is still encoded and sent to STT. Speech energy resets on every segment end,
+misfire, session stop, and restart. `onVADMisfire` also clears the pending speech marker and
+user-speaking state.
+
+Automatic frontend barge-in is disabled. Speech accepted while an assistant turn or playback is
+active is discarded. The backend still supports interruption: new binary audio cancels the active
+greeting or turn and explicit `interrupt` cancels without starting another turn.
+
+## Playback and turn state
+
+The frontend sets its pending-turn guard before WAV encoding and sending. It blocks another accepted
+turn through transcription, generation, and assistant playback. `listening`, `turn_complete`, or a
+recoverable turn error releases the backend-work guard, while the speaking indicator remains tied to
+the real audio queue.
+
+The status indicator and Lingu animation prioritize assistant playback, then pending backend work,
+over microphone detections. The localized preparing-response label covers the wait after sending an
+utterance, transcription, generation, and gaps between audio fragments while backend work is pending.
+The interface returns to listening only after both backend work and playback have finished.
+
+The Web Audio queue uses `decodeAudioData` for both WAV and MP3, preserves decode order, schedules
+decoded chunks contiguously, and reports idle only after pending decodes and active sources drain.
+If Web Audio decoding fails, it falls back to an
+HTML audio element with the matching `audio/wav` or `audio/mpeg` MIME type after all preceding Web
+Audio sources have ended. Subsequent chunks wait for that element to finish. Cancellation releases
+both the wait for preceding sources and active fallback
+playback, removes fallback listeners and Blob URLs, invalidates pending generations, stops active
+sources, and prevents stale callbacks from restarting playback.
+
+## Persistence
+
+Captured and synthesized voice audio remains transient; only transcript and session data is persisted.
+
+A voice session creates or reuses a `Conversation`. Reuse requires a positive supplied conversation
+ID owned by the user and a compatible target language. The current frontend does not send this ID,
+so normal voice starts create a new `source="voice"` conversation.
+Voice conversation titles use a native-language label and date. German, Danish, Finnish, and Croatian
+dates place an ordinal dot after the day; Croatian dates also end with a dot after the year.
+
+Lesson practice titles instead use the native-language equivalent of `Practice: {lesson title}`,
+bounded to the existing 200-character title column. The existing voice transcript persistence and
+text-chat history display apply; subsequent practice sessions have separate rows with the same topic
+title and their own timestamps. The lesson reference/context is session-local, not a new database
+association or a separately persisted report. Text chat retains its existing transcript-based flow.
+
+`ChatHistory` rows store role, content, target language, optional plan provenance, conversation, and
+the actual turn modality. Normal assistant replies link to their learner message through `reply_to_id`;
+greetings remain unpaired. Existing unpaired messages remain readable but are not inferred as turns.
+Voice sessions are visible in text-chat history. Continuing from text chat supplies textual context
+but normally creates a separate voice conversation.
+
+Persistence rules:
+
+- Successful greeting: assistant only.
+- Successful normal or text-only-fallback turn: user and assistant.
+- Empty STT, failed STT, failed LLM, empty LLM fallback, cancellation, or failed output transport:
+  neither side of that turn.
+
+Writes use best-effort background tasks and update conversation timestamps. Normal-turn writes are
+serialized within the pipeline, saving user, associated assistant, activity, and reward in a single
+transaction; cleanup waits for pending writes. Failure rolls back the whole turn, not just its reply.
+A conversation can remain empty when a session ends before a persistible turn.
+
+Persisted answered contributions count as plan-owned daily activity. Three distinct answered learner
+contributions on the same UTC day grant 20 XP once per conversation/day, capped at 60 XP per plan/day.
+Lesson practice uses this same reward without an extra bonus. Greetings, failed/cancelled turns, and
+planless conversations do not earn rewards. Successful processing captures the response completion
+timestamp before scheduling the background transcript task, after response delivery and before the
+final `turn_complete` notification. The timestamp fixes the activity day even if the task starts or
+acquires its transcript/database lock after midnight; all reward/progress operations reuse it.
+Continuing the same conversation in text chat persists chat modality and uses chat rewards independently of voice.
+No client reward claim or new voice-control event is used.
+Reward rules and durable source keys are specified in `learning-resources.instructions.md`.
+
+LLM usage is stored best-effort with `source="conversation"` and optional plan provenance when token
+metadata is available. Greeting usage is not recorded.
+
+## Memory
+
+Memories are global per user and plan ID is provenance only. The latest memory context is refreshed
+before each user turn. A turn may execute at most one native `save_user_memory` call; payloads never
+reach TTS or transcripts.
+
+Only a confirmed new save emits `memory_updated`. Duplicate, skipped, or failed saves do not. A
+tool-free retry discards invalid partial output, retains saved-memory context, removes tool
+instructions, and rejects an empty fallback. Explicit provider tool incompatibility is remembered
+only for the current WebSocket session.
+
+## Access, quotas, and post-assessment demo
+
+Voice access is resolved in this order:
+
+1. Active/trialing subscription, including self-hosted Stripe-disabled access.
+2. Active no-card freemium trial.
+3. Remaining weekly freemium voice quota.
+4. Valid one-time post-assessment demo token.
+
+The post-assessment credential is available only with Stripe enabled, for an unsubscribed user whose
+durable demo right is unused. Redis stores it for 24 hours and the configured duration defaults to
+300 seconds. It can be regenerated while unused.
+
+Because ordinary freemium access precedes the demo, a supplied token is not consumed while a
+freemium trial or voice balance still grants access. The atomic account-wide claim, credential
+consumption, and rollback rules are owned by `subscriptions-freemium.instructions.md`
+(Post-assessment voice demo). Startup cannot create a conversation after a failed claim; its error
+frame and close code are defined in `api-endpoints.instructions.md`. The token payload's plan and
+language are not currently authoritative for session resolution.
+
+The demo UI derives consumption from the refreshed profile's `assessment_voice_trial_used`, not
+merely from ending a session entered through the assessment route. An earlier subscription/trial/quota
+access path therefore leaves the unused demo available. Ordinary access can still permit restarting
+after the demo has been consumed.
+
+General user token, daily/weekly minute, and weekly session quotas still apply to all voice access
+modes. Zero means unlimited for these general quotas. The effective maximum duration is reduced by
+the selected access mode and remaining minute balances. Quotas are checked at connection rather
+than on every turn.
+
+Weekly session usage is recorded during authorization. Elapsed voice seconds are recorded once
+during pipeline cleanup; freemium voice seconds are added only when freemium quota was the effective
+access path. Recording failures do not surface to the user.
+
+The browser refreshes general quotas and, when billing is enabled, freemium status after socket-backed
+session cleanup, with bounded delayed reads at 1.5 and 5 seconds to allow backend elapsed-time
+recording to finish.
+Restart, unmount, or authentication-session replacement cancels delayed refresh work, and obsolete
+responses cannot publish another session's quota. An advisory trial expiry or zero-balance update
+does not unmount an active conversation; backend session limits remain authoritative.
+Result and invitation placement follows `architecture-frontend.instructions.md` (Shared access
+presentation).
+
+Maintenance is checked when warmup and WebSocket access begin. Non-admin WebSockets close with 1013;
+administrators bypass maintenance. Redis failure during this check is fail-open, and enabling
+maintenance does not disconnect existing sessions.
+
+## Timeouts and settings
+
+The backend runs maximum-duration and inactivity watchers. Each sends one warning in its final 60
+seconds, then emits `session_end` and closes normally. Inactivity is checked every five seconds and
+resets on any received audio frame before transcription confirms speech. The inactivity watcher
+does not warn or close while a greeting or normal backend turn is pending. Finishing, failing, or
+cancelling backend work starts a fresh inactivity interval. Maximum duration continues to apply
+during processing. This timing is based on backend task completion; the protocol has no client
+playback-completion acknowledgement.
+
+The frontend tracks warning deadlines separately for inactivity and maximum duration and displays
+the earliest deadline. A `transcribing` status confirms receipt of new audio and clears only the
+inactivity warning. A maximum-duration warning retains its original deadline. Countdown values are
+derived from the selected deadline rather than restarted when another warning becomes visible.
+
+Current Settings choices are:
+
+- maximum duration: 15 or 30 minutes;
+- inactivity: 1, 3, or 5 minutes;
+- end-of-turn pause: automatic, 1, 2, or 3 seconds.
+
+Timeout settings are global per user. Backend settings are read at connection; VAD pause is applied
+in the browser when the session component is created.
+
+## Error recovery and cleanup
+
+Visible errors are translated by code using the active interface locale. Transcription, tutor-response,
+and speech-generation failures have distinct messages; unknown server errors use a localized generic
+fallback. Raw server messages and socket close reasons remain diagnostic log data. Transport failures
+display the localized connection error without appended backend text or transport diagnostics.
+
+`stt_failed`, `llm_failed`, and `tts_failed` are recoverable turn errors. The frontend cancels
+playback, clears pending assistant state, releases the turn guard, keeps the session live, and clears
+the visible error after the next WAV is sent successfully.
+
+Other server errors, startup failures, transport failures, and unexpected socket closures finalize
+the session. There is no automatic reconnection.
+
+Warmup and WebSocket access failures show an inline paywall only when additive metadata confirms
+`freemium_exhausted` for `voice`. `freemium_unavailable`, malformed responses, or a legacy
+`subscription_required` without a reason show a localized error and refresh advisory status without
+inferring exhaustion. Cleanup still releases microphone, VAD, socket, and playback resources.
+Confirmed denials suppress idle starters and restart controls until the shared access-recovery hook
+retires them; recovery does not start recording automatically. The shared recovery contract is owned
+by `architecture-frontend.instructions.md`.
+
+Frontend cleanup is idempotent: it invalidates attempt/socket identities, detaches callbacks, requests
+session close when possible, stops microphone tracks, serializes VAD pause, cancels audio, closes the
+AudioContext, and dismisses word selection. Late permission, socket, Blob, and playback callbacks
+cannot mutate a restarted or unmounted session.
+
+Only completed assistant transcripts are vocabulary-selection surfaces. Session changes and
+transcript replacement invalidate pending selections and saves.
+
+## Related specifications
+
+- `speech-services.instructions.md` — TTS and STT adapters and HTTP gateways.
+- `subscriptions-freemium.instructions.md` — access and quota policy.
+- `multi-language.instructions.md` — active-language and plan provenance rules.
+- `memories.instructions.md` — global memory behavior and native tool contract.

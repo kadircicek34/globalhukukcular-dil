@@ -1,0 +1,439 @@
+'use client'
+
+import Link from 'next/link'
+import { useEffect, useRef, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import { Circle, CircleDot, Diamond, Check, Minus } from 'lucide-react'
+import { PageLoading } from '@/components/ui/page-loading'
+import { getLandingSubscriptionState } from '@/lib/landing-subscription'
+import { restoreAccessToken } from '@/lib/api'
+import { createCheckout } from '@/lib/billing'
+import { hasTwoMonthsFree } from '@/lib/billing-copy'
+import { checkoutNavigationHref } from '@/lib/checkout-navigation'
+import { useAuthStore } from '@/store/auth'
+
+type BillingInterval = 'monthly' | 'yearly'
+
+interface PricingSectionProps {
+  allowRegistration: boolean
+  stripeEnabled: boolean
+  freemiumTrialEnabled?: boolean
+  trialDays: number
+  hasSession: boolean
+  priceMonthly: number
+  priceYearly: number
+  totalPriceMonthly: number
+  totalPriceYearly: number
+}
+
+export default function PricingSection({
+  allowRegistration,
+  stripeEnabled,
+  freemiumTrialEnabled = false,
+  trialDays,
+  hasSession,
+  priceMonthly,
+  priceYearly,
+  totalPriceMonthly,
+  totalPriceYearly,
+}: PricingSectionProps) {
+  const tBilling = useTranslations('billing')
+  const tLanding = useTranslations('landing')
+  const locale = useLocale()
+  const sessionVersion = useAuthStore((s) => s.sessionVersion)
+  const [lookupVersion, setLookupVersion] = useState<number | null>(null)
+  const [subscribed, setSubscribed] = useState<boolean | null>(
+    hasSession ? null : false
+  )
+  const [trialUsed, setTrialUsed] = useState<boolean | null>(false)
+  const [checkoutLoading, setCheckoutLoading] =
+    useState<BillingInterval | null>(null)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const checkoutRequest = useRef<AbortController | null>(null)
+  useEffect(() => {
+    setCheckoutLoading(null)
+    setCheckoutError(null)
+    return () => checkoutRequest.current?.abort()
+  }, [sessionVersion])
+
+  useEffect(() => {
+    if (!hasSession) {
+      setSubscribed(false)
+      setTrialUsed(false)
+      setLookupVersion(null)
+      return
+    }
+    let cancelled = false
+    setSubscribed(null)
+    async function checkSubscription() {
+      const state = await getLandingSubscriptionState()
+      if (
+        cancelled ||
+        useAuthStore.getState().sessionVersion !== sessionVersion
+      )
+        return
+      setSubscribed(state.subscribed)
+      setTrialUsed(state.trialUsed)
+      setLookupVersion(sessionVersion)
+    }
+    void checkSubscription()
+    return () => {
+      cancelled = true
+    }
+  }, [hasSession, sessionVersion])
+
+  if (!stripeEnabled) return null
+
+  if (hasSession && (subscribed === null || lookupVersion !== sessionVersion)) {
+    return (
+      <section className="mx-auto flex min-h-80 w-full max-w-5xl items-center justify-center px-6 pb-24">
+        <PageLoading fullScreen={false} />
+      </section>
+    )
+  }
+
+  if (hasSession && subscribed) return null
+
+  async function startCheckout(plan: BillingInterval) {
+    if (checkoutLoading) return
+    const controller = new AbortController()
+    checkoutRequest.current = controller
+    const { sessionVersion } = useAuthStore.getState()
+    const obsolete = () =>
+      controller.signal.aborted ||
+      useAuthStore.getState().sessionVersion !== sessionVersion
+    setCheckoutLoading(plan)
+    setCheckoutError(null)
+
+    try {
+      if (!useAuthStore.getState().accessToken) {
+        await restoreAccessToken(controller.signal)
+      }
+      if (obsolete()) return
+
+      const url = await createCheckout(plan, controller.signal)
+      if (obsolete()) return
+      if (url) window.location.assign(url)
+      else setSubscribed(true)
+    } catch {
+      if (obsolete()) return
+      setCheckoutError(tBilling('checkoutError'))
+    } finally {
+      if (!obsolete()) setCheckoutLoading(null)
+    }
+  }
+
+  const canStartTrial =
+    Number.isInteger(trialDays) && trialDays > 0 && trialUsed === false
+  const planIcons = [Circle, CircleDot, Diamond]
+
+  const freeRows = ['f1', 'f2', 'f3', 'f4', 'f5']
+  const limitedRows = ['lessons', 'games', 'l1', 'l2', 'l3', 'l4']
+  const tableRows = [
+    ...freeRows.map((k) => ({
+      label: tBilling(`freeFeature.${k}`),
+      free: true as boolean | 'limited',
+      monthly: true,
+      yearly: true,
+    })),
+    ...limitedRows.map((k) => ({
+      label: tBilling(`freeFeature.${k}`),
+      free: 'limited' as const,
+      monthly: true,
+      yearly: true,
+    })),
+    {
+      label: tBilling('planFeature.feature1'),
+      free: false as boolean | 'limited',
+      monthly: true,
+      yearly: true,
+    },
+    ...(hasTwoMonthsFree(priceMonthly, priceYearly)
+      ? [
+          {
+            label: tBilling('planFeature.feature2'),
+            free: false,
+            monthly: false,
+            yearly: true,
+          },
+        ]
+      : []),
+  ]
+
+  const plans = [
+    {
+      name: tBilling('planFreeBadge'),
+      icon: planIcons[0],
+      price: null,
+      priceLabel: null,
+      badge: null,
+      desc: tBilling(
+        freemiumTrialEnabled ? 'planFreeTrialDesc' : 'planFreeDesc'
+      ),
+      badgeStyle: '',
+      href: hasSession ? '/dashboard' : '/register',
+      cta: tBilling('planFreeCta'),
+      isFree: true as const,
+    },
+    {
+      name: tBilling('planMonthlyName'),
+      icon: planIcons[1],
+      price: priceMonthly,
+      priceLabel: tBilling('month'),
+      originalPrice: totalPriceMonthly,
+      badge: tBilling(canStartTrial ? 'trialBadge' : 'trialBadgeTrialUsed'),
+      desc: null,
+      badgeStyle: 'text-fl-accent border-fl-accent/30',
+      href: hasSession ? '/dashboard' : '/register?plan=monthly',
+      cta: tBilling(canStartTrial ? 'ctaRegister' : 'ctaRegisterTrialUsed'),
+      isFree: false as const,
+      interval: 'monthly' as const,
+    },
+    {
+      name: tBilling('planYearlyName'),
+      icon: planIcons[2],
+      price: priceYearly,
+      priceLabel: tBilling('year'),
+      originalPrice: totalPriceYearly,
+      badge: tBilling('bestValue'),
+      desc: null,
+      badgeStyle: 'text-fl-accent border-fl-accent/30',
+      href: hasSession ? '/dashboard' : '/register?plan=yearly',
+      cta: tBilling(canStartTrial ? 'ctaRegister' : 'ctaRegisterTrialUsed'),
+      isFree: false as const,
+      interval: 'yearly' as const,
+    },
+  ]
+
+  return (
+    <section className="mx-auto w-full max-w-5xl px-6 pb-24">
+      <div className="mb-10 text-center">
+        <h2 className="text-fl-fg mb-2 font-sans text-xl font-bold tracking-tight">
+          {tBilling('pricingTitle')}
+        </h2>
+        <p className="text-fl-muted-1 mx-auto mb-4 max-w-2xl font-sans text-sm leading-relaxed">
+          {tBilling('pricingContext')}
+        </p>
+        <p className="text-fl-muted-1 font-sans text-sm">
+          {tBilling(canStartTrial ? 'pricingDesc' : 'pricingDescTrialUsed', {
+            days: trialDays,
+          })}
+        </p>
+      </div>
+
+      {/* Plan cards */}
+      <div className="mb-12 grid grid-cols-1 gap-4 md:grid-cols-3">
+        {plans.map((plan) => {
+          const Icon = plan.icon
+          return (
+            <div
+              key={plan.name}
+              className={`flex flex-col gap-4 border p-6 ${
+                plan.isFree
+                  ? 'border-fl-border-2 bg-fl-bg-alt'
+                  : plan.name === tBilling('planYearlyName')
+                    ? 'border-fl-accent/30 bg-fl-surface'
+                    : 'border-fl-border bg-fl-surface'
+              }`}
+            >
+              <div className="border-fl-border flex items-center justify-between border-b pb-3">
+                <div className="flex items-center gap-2">
+                  <Icon className="text-fl-muted-2 h-4 w-4" />
+                  <span className="text-fl-label text-fl-muted-2 font-sans text-sm font-semibold tracking-tight">
+                    {plan.name}
+                  </span>
+                </div>
+                {plan.badge && (
+                  <span
+                    className={`text-fl-hint border px-2 py-0.5 font-mono tracking-widest uppercase ${plan.badgeStyle}`}
+                  >
+                    {plan.badge}
+                  </span>
+                )}
+              </div>
+
+              <div className="min-h-[4.25rem]">
+                {plan.price !== null ? (
+                  <>
+                    {Number.isFinite(plan.originalPrice) &&
+                      Number.isFinite(plan.price) &&
+                      plan.price > 0 &&
+                      plan.originalPrice > plan.price && (
+                        <p className="text-fl-muted-2 font-mono text-sm line-through">
+                          {tBilling('priceOriginal', {
+                            price: new Intl.NumberFormat(locale).format(
+                              plan.originalPrice
+                            ),
+                            period: plan.priceLabel,
+                          })}
+                        </p>
+                      )}
+                    <p className="text-fl-fg flex items-baseline gap-2 font-mono text-xl font-bold">
+                      {tBilling('priceAmount', {
+                        amount: new Intl.NumberFormat(locale).format(
+                          plan.price
+                        ),
+                      })}
+                      <span className="text-fl-muted-1 text-sm">
+                        {tBilling('pricePerPeriod', {
+                          period: plan.priceLabel,
+                        })}
+                      </span>
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p
+                      className="text-fl-muted-2 invisible font-mono text-sm"
+                      aria-hidden
+                    >
+                      &nbsp;
+                    </p>
+                    <p className="text-fl-muted-1 font-sans text-sm leading-relaxed">
+                      {plan.desc}
+                    </p>
+                  </>
+                )}
+              </div>
+
+              {hasSession && !plan.isFree ? (
+                <button
+                  type="button"
+                  disabled={checkoutLoading !== null}
+                  onClick={() => startCheckout(plan.interval)}
+                  className="bg-fl-accent text-fl-accent-fg hover:bg-fl-accent/90 inline-block px-6 py-2.5 text-center font-mono text-sm font-bold tracking-widest uppercase transition-colors disabled:opacity-50"
+                >
+                  {checkoutLoading === plan.interval ? '...' : plan.cta}
+                </button>
+              ) : (
+                <Link
+                  href={
+                    !hasSession && !allowRegistration
+                      ? checkoutNavigationHref(
+                          '/login',
+                          plan.isFree ? null : plan.interval
+                        )
+                      : plan.href
+                  }
+                  className={`inline-block px-6 py-2.5 text-center font-mono text-sm font-bold tracking-widest uppercase transition-colors ${
+                    plan.isFree
+                      ? 'border-fl-border-2 text-fl-muted-1 hover:text-fl-fg hover:border-fl-border border'
+                      : 'bg-fl-accent text-fl-accent-fg hover:bg-fl-accent/90'
+                  }`}
+                >
+                  {!hasSession && !allowRegistration
+                    ? tLanding('signIn')
+                    : plan.cta}
+                </Link>
+              )}
+              {!plan.isFree && (
+                <p className="text-fl-muted-1 font-sans text-xs leading-relaxed">
+                  {tBilling(
+                    canStartTrial
+                      ? 'paywallNoCharge'
+                      : 'paywallNoChargeTrialUsed'
+                  )}
+                </p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Comparison table */}
+      <div className="border-fl-border overflow-hidden border">
+        <table className="w-full table-fixed">
+          <thead>
+            <tr className="border-fl-border bg-fl-surface border-b">
+              <th className="text-fl-label text-fl-muted-2 w-[42%] px-3 py-3 text-left font-mono tracking-widest uppercase sm:w-auto sm:px-5">
+                &nbsp;
+              </th>
+              <th className="text-fl-muted-2 w-[19.333%] px-1 py-3 text-center font-mono text-xs tracking-normal wrap-anywhere uppercase sm:w-auto sm:px-4 sm:tracking-widest">
+                {tBilling('planFreeName')}
+              </th>
+              <th className="text-fl-muted-2 w-[19.333%] px-1 py-3 text-center font-mono text-xs tracking-normal wrap-anywhere uppercase sm:w-auto sm:px-4 sm:tracking-widest">
+                {tBilling('planMonthlyName')}
+              </th>
+              <th className="text-fl-muted-2 w-[19.333%] px-1 py-3 text-center font-mono text-xs tracking-normal wrap-anywhere uppercase sm:w-auto sm:px-4 sm:tracking-widest">
+                {tBilling('planYearlyName')}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {tableRows.map((row, i) => (
+              <tr
+                key={i}
+                className={
+                  i < tableRows.length - 1 ? 'border-fl-border border-b' : ''
+                }
+              >
+                <td className="text-fl-muted-1 px-3 py-3 font-mono text-xs sm:px-5">
+                  {row.label}
+                </td>
+                <td className="px-1 py-3 text-center sm:px-4">
+                  {row.free === 'limited' ? (
+                    <span className="text-fl-muted-2 text-fl-label font-mono tracking-normal wrap-anywhere uppercase sm:tracking-widest">
+                      {tBilling('limitedLabel')}
+                    </span>
+                  ) : row.free ? (
+                    <Check className="text-fl-accent mx-auto h-3.5 w-3.5" />
+                  ) : (
+                    <Minus className="text-fl-muted-4 mx-auto h-3.5 w-3.5" />
+                  )}
+                </td>
+                <td className="px-1 py-3 text-center sm:px-4">
+                  {row.monthly ? (
+                    <Check className="text-fl-accent mx-auto h-3.5 w-3.5" />
+                  ) : (
+                    <Minus className="text-fl-muted-4 mx-auto h-3.5 w-3.5" />
+                  )}
+                </td>
+                <td className="px-1 py-3 text-center sm:px-4">
+                  {row.yearly ? (
+                    <Check className="text-fl-accent mx-auto h-3.5 w-3.5" />
+                  ) : (
+                    <Minus className="text-fl-muted-4 mx-auto h-3.5 w-3.5" />
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-8 text-center">
+        {hasSession ? (
+          <button
+            type="button"
+            disabled={checkoutLoading !== null}
+            onClick={() => startCheckout('yearly')}
+            className="bg-fl-accent text-fl-accent-fg hover:bg-fl-accent/90 inline-block px-10 py-3 font-mono text-sm font-bold tracking-widest uppercase transition-colors disabled:opacity-50"
+          >
+            {checkoutLoading === 'yearly'
+              ? '...'
+              : tBilling(
+                  canStartTrial ? 'ctaRegister' : 'ctaRegisterTrialUsed'
+                )}
+          </button>
+        ) : (
+          <Link
+            href={checkoutNavigationHref(
+              allowRegistration ? '/register' : '/login',
+              'yearly'
+            )}
+            className="bg-fl-accent text-fl-accent-fg hover:bg-fl-accent/90 inline-block px-10 py-3 font-mono text-sm font-bold tracking-widest uppercase transition-colors"
+          >
+            {allowRegistration
+              ? tBilling(canStartTrial ? 'ctaRegister' : 'ctaRegisterTrialUsed')
+              : tLanding('signIn')}
+          </Link>
+        )}
+        {checkoutError && (
+          <p className="text-fl-error mt-3 font-mono text-xs">
+            {checkoutError}
+          </p>
+        )}
+      </div>
+    </section>
+  )
+}

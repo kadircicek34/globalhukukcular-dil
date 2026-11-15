@@ -1,0 +1,228 @@
+from __future__ import annotations
+
+from datetime import UTC, date, datetime, timedelta
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.competency import UserCompetency
+from app.models.progress import Progress
+from app.models.study_plan import StudyPlan
+
+XP_LESSON_COMPLETE = 20
+XP_EXERCISE_CORRECT = 5
+XP_EXERCISE_WRONG = 1
+XP_FLASHCARD_REVIEW = 2
+
+
+def progress_today() -> date:
+    return datetime.now(UTC).date()
+
+
+def current_streak(entries: list[Progress]) -> int:
+    """Entries are newest first. Yesterday's streak remains available today."""
+    if not entries or entries[0].date < progress_today() - timedelta(days=1):
+        return 0
+    return entries[0].streak_day
+
+
+async def lock_progress_plan(db: AsyncSession, user_id: int, plan_id: int) -> StudyPlan | None:
+    # NO KEY UPDATE serializes counters without conflicting with FK KEY SHARE locks
+    # already held by concurrent transcript/attempt inserts referencing this plan.
+    return (
+        await db.execute(
+            select(StudyPlan)
+            .where(StudyPlan.id == plan_id, StudyPlan.user_id == user_id)
+            .with_for_update(key_share=True)
+        )
+    ).scalar_one_or_none()
+
+
+async def update_daily_progress(
+    db: AsyncSession,
+    user_id: int,
+    *,
+    study_plan_id: int | None = None,
+    lesson_completed: bool = False,
+    exercise_correct: bool | None = None,
+    flashcard_reviewed: bool = False,
+    xp: int = 0,
+    skill: str | None = None,
+    skill_score: float | None = None,
+    activity_date: date | None = None,
+    commit: bool = True,
+) -> Progress:
+    today = activity_date if activity_date is not None else progress_today()
+    if study_plan_id is not None:
+        await lock_progress_plan(db, user_id, study_plan_id)
+
+    base_filter = [Progress.user_id == user_id]
+    if study_plan_id is not None:
+        base_filter.append(Progress.study_plan_id == study_plan_id)
+
+    result = await db.execute(
+        select(Progress)
+        .where(*base_filter, Progress.date >= today)
+        .order_by(Progress.date)
+        .execution_options(populate_existing=True)
+    )
+    following = list(result.scalars().all())
+    entry = following.pop(0) if following and following[0].date == today else None
+
+    if not entry:
+        yesterday = today - timedelta(days=1)
+        previous_result = await db.execute(
+            select(Progress)
+            .where(*base_filter, Progress.date < today)
+            .order_by(Progress.date.desc())
+            .limit(1)
+            .execution_options(populate_existing=True)
+        )
+        previous = previous_result.scalar_one_or_none()
+        streak = previous.streak_day + 1 if previous and previous.date == yesterday else 1
+
+        entry = Progress(
+            user_id=user_id,
+            date=today,
+            xp_earned=0,
+            lessons_completed=0,
+            exercises_correct=0,
+            exercises_total=0,
+            streak_day=streak,
+            skills=dict(previous.skills or {}) if previous else {},
+            skill_updates={},
+            study_plan_id=study_plan_id,
+        )
+        db.add(entry)
+        await db.flush()
+
+    if lesson_completed:
+        entry.lessons_completed += 1
+        entry.xp_earned += XP_LESSON_COMPLETE
+
+    if exercise_correct is not None:
+        entry.exercises_total += 1
+        if exercise_correct:
+            entry.exercises_correct += 1
+            entry.xp_earned += XP_EXERCISE_CORRECT
+        else:
+            entry.xp_earned += XP_EXERCISE_WRONG
+
+    if flashcard_reviewed:
+        entry.xp_earned += XP_FLASHCARD_REVIEW
+
+    if xp > 0:
+        entry.xp_earned += xp
+
+    if skill and skill_score is not None:
+        skills = dict(entry.skills or {})
+        old = skills.get(skill, skill_score)
+        skills[skill] = round(old * 0.7 + skill_score * 0.3, 3)
+        entry.skills = skills
+        if entry.skill_updates is not None:
+            updates = dict(entry.skill_updates)
+            updates[skill] = [*updates.get(skill, []), skill_score]
+            entry.skill_updates = updates
+
+    # Lock acquisition order can differ from activity-date order around midnight.
+    # Replay each later day's own scores against its corrected predecessor, keeping
+    # the original per-update rounding and all later contributions intact.
+    previous = entry
+    for later in following:
+        later.streak_day = (
+            previous.streak_day + 1 if later.date == previous.date + timedelta(days=1) else 1
+        )
+        if later.skill_updates is not None:
+            skills = dict(previous.skills or {})
+            for later_skill, scores in later.skill_updates.items():
+                for score in scores:
+                    old = skills.get(later_skill, score)
+                    skills[later_skill] = round(old * 0.7 + score * 0.3, 3)
+            later.skills = skills
+        # A legacy row is an opaque skill checkpoint, not an empty list of updates.
+        previous = later
+
+    if commit:
+        await db.commit()
+        await db.refresh(entry)
+    else:
+        await db.flush()
+    return entry
+
+
+async def upsert_unit_competency(
+    db: AsyncSession,
+    user_id: int,
+    unit_id: str,
+    competency_texts: list[str],
+    lesson_score: float,
+    *,
+    study_plan_id: int | None = None,
+) -> None:
+    """
+    Update (or create) UserCompetency rows for all competencies in a unit.
+
+    Uses an exponential moving average:  new = 0.7 * old + 0.3 * lesson_score
+    Marks a competency as mastered when score >= 0.80.
+    """
+    if not unit_id or not competency_texts:
+        return
+
+    now = datetime.now(UTC).replace(tzinfo=None)
+
+    for text in competency_texts:
+        result = await db.execute(
+            select(UserCompetency).where(
+                UserCompetency.user_id == user_id,
+                UserCompetency.unit_id == unit_id,
+                UserCompetency.competency_text == text,
+                UserCompetency.study_plan_id == study_plan_id,
+            )
+        )
+        row: UserCompetency | None = result.scalar_one_or_none()
+
+        if row is None:
+            row = UserCompetency(
+                user_id=user_id,
+                unit_id=unit_id,
+                competency_text=text,
+                score=lesson_score,
+                mastered=lesson_score >= 0.80,
+                updated_at=now,
+                study_plan_id=study_plan_id,
+            )
+            db.add(row)
+        else:
+            row.score = round(row.score * 0.7 + lesson_score * 0.3, 3)
+            row.mastered = row.score >= 0.80
+            row.updated_at = now
+
+    await db.flush()
+
+
+async def get_unit_competencies(
+    db: AsyncSession,
+    user_id: int,
+    study_plan_id: int | None = None,
+) -> list[dict]:
+    """Return aggregated competency scores per unit for the given user."""
+    conditions = [UserCompetency.user_id == user_id]
+    if study_plan_id is not None:
+        conditions.append(UserCompetency.study_plan_id == study_plan_id)
+    result = await db.execute(select(UserCompetency).where(*conditions))
+    rows = result.scalars().all()
+
+    # Aggregate per unit: average score across all competency rows
+    unit_scores: dict[str, list[float]] = {}
+    for row in rows:
+        unit_scores.setdefault(row.unit_id, []).append(row.score)
+
+    return [
+        {
+            "unit_id": uid,
+            "score": round(sum(scores) / len(scores), 3),
+            "mastered_count": sum(1 for r in rows if r.unit_id == uid and r.mastered),
+            "total_count": len(scores),
+        }
+        for uid, scores in unit_scores.items()
+    ]

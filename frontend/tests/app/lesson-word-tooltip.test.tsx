@@ -1,0 +1,339 @@
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import LessonPage from '@/app/(app)/lesson/[id]/page'
+import { useAuthStore, type User } from '@/store/auth'
+
+const { mockApiFetch } = vi.hoisted(() => ({
+  mockApiFetch: vi.fn(),
+}))
+
+vi.mock('@/lib/api', () => ({
+  apiFetch: mockApiFetch,
+}))
+
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
+  useLocale: () => 'en',
+}))
+
+vi.mock('next/navigation', () => ({
+  useParams: () => ({ id: '1' }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => '/lesson/1',
+  useSearchParams: () => new URLSearchParams(),
+}))
+
+function mockSelection(word: string) {
+  const rect = { left: 10, top: 20, width: 30, height: 10 }
+  const selection = {
+    isCollapsed: false,
+    rangeCount: 1,
+    toString: () => word,
+    getRangeAt: () => ({ getBoundingClientRect: () => rect }),
+    removeAllRanges: vi.fn(),
+  }
+  vi.spyOn(window, 'getSelection').mockReturnValue(
+    selection as unknown as Selection
+  )
+}
+
+const lesson = {
+  id: 1,
+  study_plan_id: 42,
+  title: 'Lesson one',
+  lesson_type: 'writing',
+  cefr_level: 'B1',
+  content: {},
+  is_completed: false,
+}
+
+const user = {
+  id: 1,
+  username: 'learner',
+  displayName: 'Learner',
+  role: 'user',
+  native_language: 'en',
+  conversation_max_duration: 300,
+  conversation_inactivity_timeout: 30,
+} satisfies User
+
+const exercises = [
+  {
+    id: 10,
+    exercise_type: 'free_write',
+    question: 'Primera pregunta',
+    options: null,
+    correct_answer: 'respuesta',
+    explanation: null,
+    native_explanation: null,
+    user_answer: null,
+    score: null,
+    feedback: null,
+    native_hint: null,
+  },
+  {
+    id: 11,
+    exercise_type: 'free_write',
+    question: 'Segunda pregunta',
+    options: null,
+    correct_answer: 'respuesta dos',
+    explanation: null,
+    native_explanation: null,
+    user_answer: null,
+    score: null,
+    feedback: null,
+    native_hint: null,
+  },
+]
+
+function mockApiFetchImplementation(url: string) {
+  if (url === '/api/lessons/1') {
+    return Promise.resolve(
+      new Response(JSON.stringify({ lesson, exercises }), { status: 200 })
+    )
+  }
+  if (url === '/api/study-plan/today') {
+    return Promise.resolve(
+      new Response(
+        JSON.stringify({ progress_day: 1, total_days: 30, lessons: [] }),
+        { status: 200 }
+      )
+    )
+  }
+  if (url.startsWith('/api/grammar')) {
+    return Promise.resolve(
+      new Response(JSON.stringify({ topics: [] }), { status: 200 })
+    )
+  }
+  if (url === '/api/lessons/exercises/10/answer') {
+    return Promise.resolve(
+      new Response(JSON.stringify({ score: 1, feedback: 'Great job' }), {
+        status: 200,
+      })
+    )
+  }
+  return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))
+}
+
+async function renderLesson() {
+  // Finish the resolved HTTP work and initial question-change effect before selecting.
+  // Finding text alone can observe the DOM before that effect dismisses old selections.
+  await act(async () => {
+    render(<LessonPage />)
+  })
+}
+
+async function selectWordInQuestion(word: string, questionText: string) {
+  const question = screen.getByText(questionText)
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  try {
+    mockSelection(word)
+    await act(async () => {
+      fireEvent.pointerUp(question)
+      // Advance the hook's deferred selection itself, not an unrelated real timer.
+      await vi.advanceTimersByTimeAsync(0)
+    })
+  } finally {
+    vi.useRealTimers()
+  }
+}
+
+async function submitCurrentAnswer(answer: string) {
+  const textarea = screen.getByPlaceholderText('yourAnswer')
+  fireEvent.change(textarea, { target: { value: answer } })
+  fireEvent.click(screen.getByRole('button', { name: 'submitAnswer' }))
+  await waitFor(() => {
+    expect(
+      mockApiFetch.mock.calls.some(
+        ([calledUrl]) => calledUrl === '/api/lessons/exercises/10/answer'
+      )
+    ).toBe(true)
+  })
+  await screen.findByText('Great job')
+}
+
+describe('Lesson page word tooltip', () => {
+  beforeAll(() => {
+    Element.prototype.scrollIntoView = vi.fn()
+  })
+
+  beforeEach(() => {
+    mockApiFetch.mockReset()
+    mockApiFetch.mockImplementation(mockApiFetchImplementation)
+    useAuthStore.setState({ user, sessionVersion: 1 })
+  })
+
+  afterEach(() => {
+    cleanup()
+    useAuthStore.setState(useAuthStore.getInitialState(), true)
+  })
+
+  it('preserves the draft and selected word while opening, loading and hiding translation', async () => {
+    let resolveTranslation!: (response: Response) => void
+    const translationUrl = '/api/lessons/exercises/10/question-translation'
+    mockApiFetch.mockImplementation((url: string) =>
+      url === translationUrl
+        ? new Promise<Response>((resolve) => {
+            resolveTranslation = resolve
+          })
+        : mockApiFetchImplementation(url)
+    )
+    await renderLesson()
+    expect(mockApiFetch.mock.calls.some(([url]) => url === translationUrl)).toBe(
+      false
+    )
+
+    const textarea = screen.getByPlaceholderText('yourAnswer')
+    fireEvent.change(textarea, { target: { value: 'My unfinished answer' } })
+    await selectWordInQuestion('pregunta', 'Primera pregunta')
+    const selection = window.getSelection()!
+    const expectPreserved = () => {
+      expect(screen.getByPlaceholderText('yourAnswer')).toHaveValue(
+        'My unfinished answer'
+      )
+      expect(screen.getByText('saveWord')).toBeVisible()
+      expect(screen.getByText('pregunta', { exact: true })).toBeVisible()
+      expect(selection.removeAllRanges).not.toHaveBeenCalled()
+    }
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'showQuestionTranslation' })
+    )
+    expect(screen.getByText('translatingQuestion')).toBeVisible()
+    expectPreserved()
+
+    await act(async () => {
+      resolveTranslation(
+        new Response(
+          JSON.stringify({
+            question: exercises[0].question,
+            question_translation: 'First question',
+            question_translation_language: 'en',
+          }),
+          { status: 200 }
+        )
+      )
+    })
+    expect(screen.getByText('First question')).toBeVisible()
+    expectPreserved()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'hideQuestionTranslation' })
+    )
+    expect(screen.getByText('First question')).not.toBeVisible()
+    expectPreserved()
+    expect(
+      mockApiFetch.mock.calls.filter(([url]) => url === translationUrl)
+    ).toHaveLength(1)
+    expect(mockApiFetch.mock.calls.some(([url]) => url.endsWith('/answer'))).toBe(
+      false
+    )
+  })
+
+  it('keeps the selected multiple-choice answer when toggling a cached translation', async () => {
+    mockApiFetch.mockImplementation((url: string) =>
+      url === '/api/lessons/1'
+        ? Promise.resolve(
+            new Response(
+              JSON.stringify({
+                lesson,
+                exercises: [
+                  {
+                    ...exercises[0],
+                    exercise_type: 'multiple_choice',
+                    options: ['Option A', 'Option B'],
+                    question_translation: 'First question',
+                    question_translation_language: 'en',
+                  },
+                ],
+              }),
+              { status: 200 }
+            )
+          )
+        : mockApiFetchImplementation(url)
+    )
+    await renderLesson()
+    fireEvent.click(screen.getByRole('button', { name: 'Option B' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'showQuestionTranslation' })
+    )
+    expect(screen.getByText('First question')).toBeVisible()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'hideQuestionTranslation' })
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'submitAnswer' }))
+
+    await screen.findByText('Great job')
+    expect(mockApiFetch).toHaveBeenCalledWith(
+      '/api/lessons/exercises/10/answer',
+      expect.objectContaining({ body: JSON.stringify({ answer: 'Option B' }) })
+    )
+    expect(
+      mockApiFetch.mock.calls.some(([url]) =>
+        url.endsWith('/question-translation')
+      )
+    ).toBe(false)
+  })
+
+  it('keeps the word tooltip open when the exercises array is replaced without navigation', async () => {
+    await renderLesson()
+
+    await selectWordInQuestion('pregunta', 'Primera pregunta')
+    expect(screen.getByText('saveWord')).toBeInTheDocument()
+
+    // Submitting the answer replaces the current exercise item in `exercises`
+    // without changing `currentExercise` — this must not close the tooltip.
+    await submitCurrentAnswer('respuesta')
+
+    expect(screen.getByText('saveWord')).toBeInTheDocument()
+  })
+
+  it('dismisses the word tooltip when navigating to the next exercise', async () => {
+    await renderLesson()
+
+    await selectWordInQuestion('pregunta', 'Primera pregunta')
+    expect(screen.getByText('saveWord')).toBeInTheDocument()
+
+    await submitCurrentAnswer('respuesta')
+
+    fireEvent.click(screen.getByRole('button', { name: /next/i }))
+    await screen.findByText('Segunda pregunta')
+
+    await waitFor(() => expect(screen.queryByText('saveWord')).not.toBeInTheDocument())
+  })
+
+  it('dismisses a selection made while question regeneration is pending', async () => {
+    let resolveRegeneration!: (response: Response) => void
+    mockApiFetch.mockImplementation((url: string) =>
+      url === '/api/lessons/exercises/10/regenerate'
+        ? new Promise<Response>((resolve) => { resolveRegeneration = resolve })
+        : mockApiFetchImplementation(url)
+    )
+    await renderLesson()
+    await screen.findByText('Primera pregunta')
+    fireEvent.click(screen.getByRole('button', { name: 'regenerateExercise' }))
+    await selectWordInQuestion('pregunta', 'Primera pregunta')
+    expect(screen.getByText('saveWord')).toBeInTheDocument()
+    await act(async () => {
+      resolveRegeneration(new Response(JSON.stringify({
+        ...exercises[0], question: 'Una pregunta nueva',
+      }), { status: 200 }))
+    })
+    await screen.findByText('Una pregunta nueva')
+    await waitFor(() => expect(screen.queryByText('saveWord')).not.toBeInTheDocument())
+  })
+})

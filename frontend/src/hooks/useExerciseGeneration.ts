@@ -1,0 +1,194 @@
+'use client'
+
+import { useCallback, useEffect, useRef } from 'react'
+import { useTranslations } from 'next-intl'
+import { useLanguageStore } from '@/store/language'
+import { useAuthStore } from '@/store/auth'
+import { resolveConfiguredTtsVoice } from '@/lib/tts-voice'
+import {
+  ExerciseGenerationError,
+  type ExerciseContext,
+  resolveExercise,
+} from '@/lib/exercise-generation'
+
+export function useExerciseGeneration<T>({
+  feature,
+  language,
+  studyPlanId,
+  level,
+  onExercise,
+  setPageState,
+  setError,
+  dismissTooltip,
+  onAccessDenied,
+}: {
+  feature: 'listening' | 'reading'
+  language: string | undefined
+  studyPlanId?: number
+  level?: string | null
+  onExercise: (exercise: T, context: ExerciseContext) => void
+  setPageState: (state: 'loading' | 'generating' | 'idle' | 'exercise') => void
+  setError: (error: string) => void
+  dismissTooltip: () => void
+  onAccessDenied?: () => void
+}) {
+  const t = useTranslations('exerciseGeneration')
+  const tCommon = useTranslations('common')
+  const active = useRef<AbortController | null>(null)
+  const lastAutomaticLoad = useRef<(() => Promise<void>) | null>(null)
+  const needsRefresh = useLanguageStore((s) => s.needsRefresh)
+  const isSwitching = useLanguageStore((s) => s.isSwitching)
+  const fetchLanguages = useLanguageStore((s) => s.fetchLanguages)
+  const sessionVersion = useAuthStore((s) => s.sessionVersion)
+
+  const run = useCallback(
+    async (generate: boolean, voice = '') => {
+      // A pending switch is not a new exercise load. Keep the current screen intact.
+      if (useLanguageStore.getState().isSwitching) return
+      // Prevent repeated clicks from starting concurrent operations, including before POST returns.
+      if (generate && active.current) return
+      active.current?.abort()
+      const controller = new AbortController()
+      active.current = controller
+      const initialContext = useLanguageStore.getState()
+      const initialPlan = initialContext.userLanguages.find(
+        (item) => item.is_active
+      )?.plan
+      const current = () => {
+        const context = useLanguageStore.getState()
+        const plan = context.userLanguages.find((item) => item.is_active)?.plan
+        if (context.isSwitching) lastAutomaticLoad.current = null
+        return (
+          !controller.signal.aborted &&
+          useAuthStore.getState().sessionVersion === sessionVersion &&
+          !context.isSwitching &&
+          context.needsRefresh === initialContext.needsRefresh &&
+          context.activeLanguage?.code ===
+            initialContext.activeLanguage?.code &&
+          plan?.id === initialPlan?.id &&
+          plan?.cefr_level === initialPlan?.cefr_level
+        )
+      }
+      setError('')
+      dismissTooltip()
+      setPageState(
+        generate && language && !needsRefresh ? 'generating' : 'loading'
+      )
+      try {
+        if (!language || needsRefresh) {
+          const loaded = await fetchLanguages(controller.signal)
+          if (controller.signal.aborted) return
+          if (!loaded || !useLanguageStore.getState().activeLanguage) {
+            throw new ExerciseGenerationError('unavailable')
+          }
+          // The updated context reruns the effect below with a read-only lookup.
+          return
+        }
+        if (generate && feature === 'listening') {
+          voice =
+            (await resolveConfiguredTtsVoice(
+              AbortSignal.any([controller.signal, AbortSignal.timeout(20_000)]),
+              voice || undefined
+            )) ?? ''
+          const currentLanguage = useLanguageStore.getState()
+          const currentPlan = currentLanguage.userLanguages.find(
+            (item) => item.is_active
+          )?.plan
+          if (
+            controller.signal.aborted ||
+            useAuthStore.getState().sessionVersion !== sessionVersion ||
+            currentLanguage.needsRefresh ||
+            currentLanguage.activeLanguage?.code !== language ||
+            (studyPlanId !== undefined && currentPlan?.id !== studyPlanId) ||
+            (level != null && currentPlan?.cefr_level !== level)
+          )
+            return
+          if (currentLanguage.isSwitching) {
+            // The config wait can finish before the switch effect sees this request.
+            lastAutomaticLoad.current = null
+            return
+          }
+        }
+        let exerciseContext: ExerciseContext | undefined
+        const exercise = await resolveExercise<T>({
+          feature,
+          context: {
+            target_language: language,
+            study_plan_id: studyPlanId,
+            level: level ?? undefined,
+          },
+          signal: controller.signal,
+          generate,
+          voice,
+          onContext: (context) => {
+            exerciseContext = context
+          },
+          onGenerating: () => {
+            if (current()) setPageState('generating')
+          },
+        })
+        if (!current()) return
+        if (exercise && exerciseContext) onExercise(exercise, exerciseContext)
+        setPageState(exercise ? 'exercise' : 'idle')
+      } catch (error) {
+        if (!current()) return
+        const code =
+          error instanceof ExerciseGenerationError ? error.code : 'unavailable'
+        if (code === 'exhausted') {
+          onAccessDenied?.()
+        } else {
+          setError(code === 'noActivePlan' ? tCommon('noActivePlan') : t(code))
+        }
+        setPageState('idle')
+      } finally {
+        if (active.current === controller) active.current = null
+      }
+    },
+    [
+      feature,
+      language,
+      studyPlanId,
+      level,
+      needsRefresh,
+      fetchLanguages,
+      setError,
+      dismissTooltip,
+      setPageState,
+      onExercise,
+      t,
+      tCommon,
+      sessionVersion,
+      onAccessDenied,
+    ]
+  )
+
+  const loadNext = useCallback(() => run(false), [run])
+  const generate = useCallback((voice = '') => run(true, voice), [run])
+
+  useEffect(() => {
+    if (isSwitching) {
+      // Only interrupted requests need resuming after a rejected switch.
+      // A displayed exercise (including a replay) and its answers stay untouched.
+      if (active.current) {
+        active.current.abort()
+        active.current = null
+        lastAutomaticLoad.current = null
+      }
+      return
+    }
+    if (lastAutomaticLoad.current !== loadNext) {
+      lastAutomaticLoad.current = loadNext
+      void loadNext()
+    }
+  }, [loadNext, isSwitching])
+
+  useEffect(() => {
+    return () => {
+      active.current?.abort()
+      active.current = null
+      lastAutomaticLoad.current = null
+    }
+  }, [])
+
+  return { loadNext, generate, needsContext: !language || needsRefresh }
+}

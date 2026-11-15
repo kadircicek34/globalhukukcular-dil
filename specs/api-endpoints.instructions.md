@@ -1,0 +1,626 @@
+---
+description: "Complete API reference for FreeLingo: all REST endpoints and the WebSocket voice conversation endpoint, grouped by router."
+applyTo: "backend/**"
+---
+
+# API Endpoints — FreeLingo
+
+Most REST endpoints are prefixed under `/api`. The public health check is at `/health`. The WebSocket endpoint is at `/ws/conversation`.
+
+Paths below a router heading are relative to its prefix unless they show the full `/api/...` path.
+Router-root endpoints use their full path to make trailing-slash behavior explicit. Each entry states
+its HTTP method, rate limit, and relevant authentication or payload contract. Limit policy is defined
+in `rate-limiting.instructions.md`.
+
+This document owns the HTTP/WebSocket interface inventory. Domain specifications own business
+behavior; `umami.instructions.md` owns analytics event semantics, privacy, deduplication, and delivery.
+
+## Postman templates and maintenance
+
+The project owner's private **Proyectos** Postman workspace contains the **FreeLingo** collection and
+the **FreeLingo — Development** environment for backend exploration, manual testing, and native
+iOS/Android integration. These resources belong to the project owner and are not publicly accessible
+or included with the open-source repository. The identifiers below are maintainer references, not
+public access links. External contributors can use the backend contract and this specification
+without access to the owner's Postman account.
+
+Maintainers with authorized account access maintain these templates through the Postman MCP
+integration; the backend routes, request/response models, and this specification remain the source
+of truth.
+
+- Workspace ID: `1e73c0a3-eee6-4d10-822d-ae3ebf0746f6`.
+- Collection UID: `22384073-1725e760-7c64-44e1-9e35-78beb24f88e7`.
+- For every backend change affecting the API contract, assess the collection impact: paths, methods,
+  authentication, headers, query parameters, bodies, response examples, scripts, variables, and
+  HTTP/SSE/WebSocket behavior.
+- Before changing Postman, tell the maintainer exactly which folders, requests, examples, scripts,
+  or environment definitions need updating and why.
+- Fetch the current Postman resources through MCP, preserve unrelated requests and local conventions,
+  and update the affected templates rather than creating duplicates. Read back the saved resources
+  and report what changed and any remaining limitations.
+- Keep credential values out of shared templates. Preparing or synchronizing requests does not
+  authorize executing them against a running service; request execution requires explicit approval.
+- Keep these templates in Postman. Do not add collection/environment exports or temporary generation
+  artifacts to the repository unless the maintainer explicitly requests them.
+
+---
+
+## Health — `/health`
+
+- **GET `/health`** — Rate limit: 60/min. Public liveness check. Returns `{"status":"ok"}` only and does not expose DB, Redis, TTS, or STT dependency details.
+
+---
+
+## Config — `/api/config`
+
+- **GET `/api/config`** — Rate limit: 60/min. Public runtime configuration flags for the frontend. Returns non-sensitive values including `allow_registration` (boolean, from `settings.ALLOW_REGISTRATION`), Stripe enablement/prices, TTS provider/OpenAI voice and `gemini_tts_voice` (`female` or `male`), `maintenance_mode`, `freemium_trial_enabled`, and `dashboard_banner`. The banner field is `null` when no active singleton exists; otherwise it is `{revision, translations}` and omits admin-only source locale, active state, and timestamps.
+
+---
+
+## Freemium — `/api/freemium`
+
+- **GET `/status`** — Rate limit: 60/min. Auth: get_current_user. Returns a flat response with `trial_active`, `trial_ends_at`, `chat_remaining`, `chat_limit`, `lessons_remaining`, `lessons_limit`, `listening_remaining`, `listening_limit`, `reading_remaining`, `reading_limit`, `games_remaining`, `games_limit`, `voice_remaining_seconds`, and `voice_limit_seconds`. Games uses durable PostgreSQL admissions; other counters use Redis. A configured freemium feature limit of `0` blocks new free usage. The endpoint still reports configured values when Stripe is disabled; subscription enforcement decides whether they apply.
+
+Shared consuming-feature dependencies return HTTP 402 with
+`detail: {reason: "freemium_exhausted", feature, remaining, limit}` for a confirmed exhausted quota.
+Unavailable quota checks instead return `reason: "freemium_unavailable"` with the feature and
+placeholder zero balances; those zeros do not establish exhaustion or a configured zero limit.
+Read-only dependencies can return `detail: "subscription_required"` when the feature limit is zero.
+Voice has the compatible additive envelope documented below. Access policy belongs to
+`subscriptions-freemium.instructions.md`.
+
+## Analytics — `/api/analytics`
+
+- **POST `/ui`** — Rate limit: 60/min. Auth: get_current_user. Body: `{event, operation_id}`,
+  where `event` is a value from `BrowserEvent` in `schemas/learning_analytics.py` and `operation_id`
+  is a UUID. Extra fields and invalid values return 422. Returns 204.
+- **POST `/public`** — Rate limit: 30/min. Public. Same body shape, but accepts only
+  `event="faq_viewed"`. Extra fields and invalid values return 422. Returns 204.
+
+These endpoints accept bounded measurement signals, not arbitrary event properties or URLs.
+A successful response does not guarantee delivery to Umami.
+
+## Games — `/api/games`
+
+All endpoints require an authenticated active user. Session IDs are UUIDs; missing or foreign sessions
+return 404. Session language and XP ownership come from their persisted plan, not active selection.
+Session endpoints also resolve owned creation request UUIDs to their canonical session; the response
+always contains the canonical ID. A request whose session was deleted returns 404.
+
+- **GET `/{game_type}`** — `game_type` is `detective`, `sentence-order` or `vocabulary-pairs`; other values return 422.
+  60/min. Requires an active plan. Returns plan ID/language/level, availability
+  and reason for `review`, `prepare`, `free`, global `quota: {remaining, limit}`, `limited`, `history`
+  and `total`. History is filtered by game type and includes all plans in the active language;
+  `skip >= 0`, `limit=10`, maximum 50.
+- **POST `/{game_type}`** — same accepted types. 5/min, maintenance checked, 202. Body: UUID `request_id`, positive
+  `study_plan_id`, `mode`. New request UUIDs require a matching active plan; a missing active plan
+  returns 404. Returns a session, reusing its request UUID
+  or the plan's active game of that type. Reserves the shared game quota for new free work;
+  402 when exhausted, 409 on changed
+  context, conflicting UUID or missing mode sources. Only newly created work starts generation.
+  Every accepted request UUID is bound to its returned session and submitted plan/mode/game type, even when
+  reusing an active game of another mode. Retrying returns that same session after completion or
+  abandonment without new quota, even if the active language has no plan. Accepted UUIDs are resolved
+  and their original parameters checked before requiring an active plan; changed parameters or a
+  deleted result return 409.
+- **GET `/sessions/{id}`** — 60/min. Returns saved state and remaining generation seconds. Expired
+  generation is reported failed and its reservation released. Does not require an active plan.
+- **POST `/sessions/{id}/answer`** — 60/min. Detective body: `challenge` (0–4), `step` (`detect`
+  or `correct`), `choice` (fragment/option index). Sentence Order body: `challenge` (0–4),
+  `step: "order"`, `order` (3–12 strict integer indices, a permutation of every fragment).
+  Requires the next unanswered step. Same-answer retries return stored state; changed answers or
+  out-of-order steps return 409; invalid indices/permutations or the wrong game's answer shape return 422.
+  Vocabulary Pairs body: `step: "match"`, `attempt` (strict integer 0–24), `challenge` and `choice`
+  (strict integers 0–4). Pairs may be solved in any order, but attempt numbers must be sequential
+  from zero. Exact retries return current state. Reusing an attempt number with different choices,
+  skipping an attempt number, selecting a solved item or resubmitting a previously tried combination
+  returns 409. Incorrect matches persist and allow further attempts with other combinations.
+- **POST `/sessions/{id}/abandon`** — 10/min. Closes a ready game without XP or quota refund;
+  terminal retries are idempotent. A generating game returns 409.
+
+Session responses contain identity, `game_type`, plan, language/native language, level, mode, status,
+creation time, XP, error and challenges. Before detection a Detective challenge exposes only its sentence/fragments and
+answer state. After detection it adds error index/options; after correction it adds correct index,
+corrected sentence and native explanation. Source context and unrevealed solutions stay server-side.
+Sentence Order challenges expose `index`, native `clue`, shuffled `fragments`, `separator` (`""` or
+`" "`) and nullable submitted `order`. Only after answering do they expose `correct`,
+`corrected_sentence` (the accepted submitted variant when correct, otherwise the canonical solution)
+and `explanation`. Accepted orders, source IDs and canonical sentences are private before answering.
+Vocabulary Pairs exposes `challenges: [{index, term, matched}]`, an independently ordered
+`meanings: [{index, text}]` list and chronological `attempts: [{attempt, challenge, choice, correct}]`.
+Solved challenges additionally expose `choice` and `assisted`. Only completed games expose each
+challenge's `sentence` and `translation`. Unmatched correspondence indices, assistance flags and
+source IDs remain private; failed attempts never reveal the solution.
+
+---
+
+## Auth — `/api/auth`
+
+- **POST `/register`** — Rate limit: 5/min (+ invite-gated). Creates account (respects `ALLOW_REGISTRATION`, invite token, and `BLOCKED_EMAIL_DOMAINS`). Password policy: 10–25 chars, at least one uppercase letter, one number, and one symbol. Returns `access_token` + sets httpOnly refresh cookie — no separate login step needed. Rejects blocked domains or invalid password with HTTP 422.
+- **POST `/login`** — Rate limit: 10/min. Returns access_token (JWT, 15 min) + refresh_token in httpOnly cookie (30 days)
+- **POST `/refresh`** — Rate limit: 60/min. Requires a valid refresh cookie, rotates it and returns a new `access_token`. Optional `Authorization: Bearer ...` and `X-Expected-User-ID` (positive PostgreSQL-range integer; invalid values return 422) restrict renewal to the client's known account. The bearer must have a valid HS256 signature and `sub`/`exp` claims; expiry is ignored only for this context comparison. Invalid bearer context returns 401. Each supplied expectation must match the account in Redis; a mismatch returns 409 `auth_context_changed` before consuming the refresh token or setting a replacement cookie. Expectations never authorize renewal without a valid cookie. Omitting both supports initial restoration with no known client identity.
+- **POST `/logout`** — Rate limit: 60/min. Deletes refresh token from Redis, clears cookie
+- **GET `/me`** — Rate limit: 60/min. Returns authenticated user profile, including subscription fields (`subscription_status`, `subscription_ends_at`, `cancel_at_period_end`, `trial_used`, `assessment_voice_trial_used`), freemium fields (`freemium_trial_ends_at`, `freemium_trial_used`), and nullable `dismissed_dashboard_banner_revision`. An optional retroactive freemium-trial write failure rolls back and reloads the persisted profile before responding; eligibility and retry behavior are defined in `subscriptions-freemium.instructions.md`.
+- **PATCH `/me`** — Rate limit: 60/min. Updates display name, email, password, native language, target language, UI locale, bio, learning goals, and conversation settings (`conversation_max_duration` ∈ {900, 1800}, `conversation_inactivity_timeout` ∈ {60, 180, 300}, `conversation_speech_pause` ∈ {0, 1000, 2000, 3000} milliseconds, where `0` means automatic). `native_language` is validated against the same supported UI-language codes used at registration (`en`, `es`, `fr`, `pt`, `de`, `it`, `ru`, `nl`, `pl`, `ro`, `tr`, `sv`, `da`, `fi`, `hr`); unsupported codes return HTTP 422 even when the API is called outside the selector-based frontend.
+- **POST `/me/avatar`** — Rate limit: 60/min. Uploads the authenticated user's profile avatar (JPEG/PNG, max 2 MB). Validates the declared content type, image signature, and minimal image structure, stores the image on disk under `/app/avatars` using a non-predictable UUID filename, and returns the user profile with `avatar` set to a cache-busted internal reference (`/api/avatars/{uuid}.{ext}?v={ms}`). The file reference is not publicly served.
+- **GET `/me/avatar-file`** — Rate limit: 60/min. Authenticated current-user avatar retrieval endpoint. Returns only the authenticated user's own avatar file; this is the supported image retrieval path used by the frontend. Responses are marked `Cache-Control: private, no-store`; client-side avatar reuse is handled by the frontend blob cache keyed by the stored avatar reference.
+- **DELETE `/me/avatar`** — Rate limit: 60/min. Removes profile avatar (sets to null)
+- **DELETE `/me`** — Rate limit: 5/min. Deletes own account and all associated data (CASCADE), returning 204. Forbidden for admin accounts. Requires the shared billing precondition below; it never cancels provider billing automatically.
+- **GET `/quota`** — Rate limit: 60/min. Returns live conversation quota status for the authenticated user (sessions this week, minutes today, minutes this week)
+- **GET `/verify-email`** — Rate limit: 60/min. Verifies email via one-time token (query param `token`, TTL 24h in Redis)
+- **POST `/resend-verification`** — Rate limit: 3/min. Sends a new verification email to the authenticated user
+- **POST `/forgot-password`** — Rate limit: 5/min. Sends password reset link to the given email. Always returns 200 (anti-enumeration).
+- **POST `/reset-password`** — Rate limit: 5/min. Resets password using one-time token (TTL 1h in Redis)
+
+### Account deletion errors
+
+`DELETE /api/auth/me` and `DELETE /api/admin/users/{id}` share these responses, with a string `detail`:
+
+- `409 subscription_cancellation_required`: subscription renewal must be canceled first. Confirmed
+  scheduled cancellation can satisfy this condition before access expires.
+- `409 billing_checkout_pending`: Checkout remains open, a known Session has no confirmed terminal
+  outcome, or a reservation without a Session ID has not reached its stored deadline. Deadline expiry
+  does not bypass the remaining live Customer billing checks.
+- `503 billing_verification_unavailable`: provider billing state could not be verified, including an
+  obsolete RevenueCat snapshot; retry is permitted without assuming cancellation or deletion.
+
+These billing rejections precede local deletion/session side effects. Provider verification, locking,
+and cancellation policy belong to `subscriptions-freemium.instructions.md` (Account deletion and billing).
+
+---
+
+## Admin — `/api/admin`
+
+Requires `role="admin"`. All endpoints return 403 for non-admin users.
+
+- **GET `/stats`** — Rate limit: 60/min. Aggregated admin overview metrics: total/active/inactive users, active/trialing/past_due subscriptions, total feedback, pending feedback, pending bug reports, and reviews pending approval.
+- **GET `/health`** — Rate limit: 60/min. Private admin diagnostic health check. Returns DB, Redis, TTS, and STT dependency status as `{"status":"ok"|"degraded","checks":{...}}`; returns HTTP 503 when any dependency check fails.
+- **GET `/users`** — Rate limit: 60/min. Lists users (paginated). Query params: `skip` (default 0), `limit` (default 10, max 100), `q` (search by username or email), `subscription` (`none`, `trialing`, `active`, `past_due`, `canceled`, `incomplete`, `incomplete_expired`, `unpaid`, `paused`), `role` (`user`, `admin`), and `is_active` (`true`, `false`). Returns `{items, total, skip, limit}`.
+- **POST `/users`** — Rate limit: 60/min. Creates user directly (bypasses `ALLOW_REGISTRATION`). Body requires `username`, `email`, `password`, `display_name`, `native_language`, `target_language`, and optional `role`; sends verification email if `EMAIL_ENABLED=true`.
+- **GET `/users/{id}`** — Rate limit: 60/min. User detail, including admin-only Stripe identifiers (`stripe_customer_id`, `stripe_subscription_id`) and subscription state.
+- **PATCH `/users/{id}`** — Rate limit: 60/min. Edits role, activity, verification, display name, conversation/token quotas, `subscription_status`, and `subscription_ends_at`. Subscription status accepts the states exposed by the user schema. Activation defaults precede explicit quota overrides in the same locked transaction; see `subscriptions-freemium.instructions.md` (Administration).
+- **DELETE `/users/{id}`** — Rate limit: 5/min. Deletes account and all associated data (CASCADE), returning `{"detail":"User deleted"}`. Self-deletion through this route returns 400. Shares the account-deletion billing errors above and never cancels provider billing automatically.
+- **GET `/users/{id}/stats`** — Rate limit: 60/min. Returns plan summary, active days, XP, streak, lessons, exercises, chat messages, chat/conversation token breakdown, completion-test data, and per-language usage.
+- **GET `/users/{id}/quota`** — Rate limit: 60/min. Live quota status from Redis (sessions this week, minutes today, minutes this week)
+- **POST `/invite`** — Rate limit: 60/min. Generates single-use invite link (48h Redis TTL)
+- **GET `/maintenance`** — Rate limit: 60/min. Returns `{"maintenance_mode": bool}` — current maintenance mode state
+- **PATCH `/maintenance`** — Rate limit: 60/min. Toggles maintenance mode on/off in Redis. Returns `{"maintenance_mode": bool}`
+- **PUT `/maintenance`** — Rate limit: 60/min. Sets maintenance mode explicitly. Body: `{maintenance_mode: bool}`. Returns `{"maintenance_mode": bool}`
+- **GET `/reviews`** — Rate limit: 60/min. Lists reviews for admin moderation. Query params: `is_approved`, `rating` (1–5), `target_language`, `order` (`asc`|`desc`), `skip` (default 0), `limit` (default 10, max 100). Returns `{items, total, skip, limit}`.
+- **PATCH `/reviews/{review_id}`** — Rate limit: 60/min. Updates review approval state. Body: `{is_approved: bool}`. Returns updated review.
+- **DELETE `/reviews/{review_id}`** — Rate limit: 60/min. Permanently deletes a review. Returns HTTP 204.
+
+---
+
+## Admin Dashboard Banner — `/api/admin/dashboard-banner`
+
+Requires `role="admin"`. Translation previews and saves must contain exactly `en`, `es`, `fr`, `pt`, `de`, `it`, `ru`, `nl`, `pl`, `ro`, `tr`, `sv`, `da`, `fi`, and `hr`, each with nonblank plain-text `title` (max 160), `subtitle` (max 240), and `description` (max 2000). Stored ten- through fourteen-locale banners remain readable but cannot be saved without all fifteen translations.
+
+- **GET `/api/admin/dashboard-banner`** — Rate limit: 60/min. Returns the singleton with `revision`, translations, `source_locale`, `is_active`, and timestamps, or `null` before the first save. Incomplete stored maps are returned unchanged for editing.
+- **POST `/translate`** — Rate limit: 10/min. Uses the configured LLM to translate `{source_locale, title, subtitle, description}` into all fifteen UI locales, preserving the validated source text exactly after trimming. Returns `{translations}` as an editable preview without saving; LLM failure returns HTTP 502.
+- **PUT `/api/admin/dashboard-banner`** — Rate limit: 60/min. Creates or updates the singleton from `{source_locale, is_active, translations}`. The server starts at revision 1 and increments the revision when source locale or translated content changes; changing only `is_active` does not increment it.
+
+---
+
+## Dashboard Banner — `/api/dashboard-banner`
+
+- **PUT `/dismiss`** — Rate limit: 60/min. Auth: get_current_user. Body: `{revision: int >= 1}`. Stores the revision on the authenticated user and returns HTTP 204 when it matches the currently active singleton; repeated dismissal is idempotent, while stale, missing, or inactive revisions return HTTP 409.
+
+---
+
+## Billing — `/api/billing`
+
+Registered only when `STRIPE_ENABLED=true`.
+
+With RevenueCat enabled, Checkout and explicit self/admin synchronization also publish customer
+profile attributes best-effort. Name, email, or native-language changes through `PATCH /api/auth/me`,
+and display-name changes through `PATCH /api/admin/users/{id}`, publish the saved profile as well.
+Attribute-write failures do not fail these operations or change their response schemas. The attribute
+list, timeout, and country-estimate semantics are owned by `subscriptions-freemium.instructions.md`.
+
+- **POST `/checkout`** — Rate limit: 60/min. Auth: get_current_user. Creates or reuses a Stripe Checkout Session for `monthly` or `yearly`, returning `{url}`. Durable per-user reservations and idempotency keys protect Customer and Session creation retries; changing prices expires the previous open session before replacement. The same open session can resume its own incomplete initial payment. Returns `409 subscription_already_active` for an existing Premium account or live active/trialing Stripe subscription, and `409 subscription_payment_pending` for other incomplete purchases or a completed session whose payment remains incomplete. Live Stripe subscriptions in `past_due`, `unpaid`, or `paused` return a Customer Portal URL instead of creating another purchase. When RevenueCat is enabled it reconciles access first; Stripe checks only control billing navigation. Provider failures return `503`; a definitive expiry validation rejection can renew an undiscovered reservation instead of blocking retries until expiry. No client-supplied customer, session, or subscription identity is accepted.
+- **POST `/portal`** — Rate limit: 60/min. Auth: get_current_user. Returns `{url}`. With RevenueCat enabled, uses the customer's verified HTTPS management URL when present; otherwise creates a Stripe Customer Portal session asynchronously for users with a `stripe_customer_id`. RevenueCat failures, invalid data, or unsafe URLs fall back to the authenticated user's stored Stripe customer; without one they return `503`. Stripe failures return `503 Stripe billing unavailable` without modifying billing identity or access. A successful read with no management URL and no Stripe customer returns `400`.
+- **POST `/webhook`** — Rate limit: 200/min. Public network access but requires a valid Stripe signature before processing. Handles checkout/session and subscription lifecycle events. Recognized events require an event ID; receipts commit with account changes and deduplicate retries. Stripe-only handlers retrieve current Subscription state under a user-row lock rather than applying potentially old event snapshots. Subscription update/delete and invoice payment-failed events ignore IDs differing from the current `stripe_subscription_id`; late Checkout completions cannot replace a current non-terminal subscription or a different persisted Customer. Invoice handling supports both legacy `invoice.subscription` and current `invoice.parent.subscription_details.subscription` shapes and ignores one-off invoices. Unknown provider statuses preserve the existing status. Quotas apply on activation transitions only. Invalid payload/signature/event ID returns 400; processing failures roll back and return 500 so Stripe retries.
+
+With `REVENUECAT_ENABLED=true`, Stripe webhooks retain identifiers and verified trial usage but do
+not modify shared access state or quotas. The following routes are registered only when both billing
+flags are enabled:
+
+- **POST `/revenuecat/webhook`** — Rate limit: 200/min. Public network access, authenticated by the exact
+  configured Authorization header. Accepts RevenueCat's API v1 `{api_version, event}` envelope and
+  verifies current customer entitlements with RevenueCat rather than applying transaction fields.
+  Returns `200 {received: true}` for processed/duplicate events, dashboard tests, ignored environments,
+  and unknown accounts. Bad authorization returns `401`; malformed envelopes or unsupported API versions
+  return `400`; unavailable configuration or reconciliation failure returns `503`. Event receipt and
+  account changes are atomic, including both sides of transfers. The entitlement and identity contract
+  belongs to `subscriptions-freemium.instructions.md`.
+- **POST `/sync`** — Rate limit: 10/min. Auth: get_current_user. No body is required; the authenticated
+  account is the only synchronization target. Returns `{subscription_status, subscription_ends_at,
+  cancel_at_period_end}` with the persisted status and UTC ISO expiration or null. Provider failure
+  returns `503` without replacing the cached snapshot.
+- **POST `/revenuecat/sync/{user_id}`** — Rate limit: 10/min. Auth: require_admin. Required JSON body:
+  `{import_stripe?: boolean}`, default false. Reconciles the specified account; true first imports its
+  persisted Stripe Subscription ID using the configured RevenueCat Stripe-app public key. Returns the
+  same status object as `/sync`, `404` for an unknown account, or `503` for failed provider operations
+  or missing import configuration. Importing a caller-supplied receipt is not supported.
+
+Public profile responses retain their existing fields. `subscription_status` exposes the last
+confirmed persisted state, consistently with access checks and admin reporting. A cached expiration
+date passing does not change that status; RevenueCat revocation requires successful reconciliation.
+
+---
+
+## Assessment — `/api/assessment`
+
+Placement assessment, plan creation, post-assessment voice trial, and end-of-level testing. Account onboarding is a separate platform flow.
+
+For `POST /complete`, an explicit body `target_language` determines the new plan's language and cannot
+be overridden by a stored quiz session. If omitted or null, resolution checks the Redis session scoped to
+`users.target_language`, then the legacy user session, and finally the profile language. Only active
+plans in the resolved language are replaced. Regardless of its source, the resolved language must be
+a supported canonical code enabled in `AVAILABLE_TARGET_LANGUAGES`. Unknown, noncanonical, empty, or
+disabled codes return `422` before curriculum dispatch or any state change; they do not fall back to English.
+
+- **GET `/start`** — Rate limit: 10/min. Begins the LLM-generated adaptive quiz.
+- **POST `/started`** — Rate limit: 10/min. Auth: get_current_user. Requires the UUID-valued
+  `X-Assessment-Attempt` header; missing or invalid headers return 422. Returns 204 after accepting
+  the explicit quiz-start measurement signal. It does not create a quiz session or study plan.
+- **GET `/bank`** — Rate limit: 60/min. Returns the full static assessment bank for the given language (query param `language`, default `en-GB`). Auth required. Response: `{questions: [{id, skill, difficulty, question, options, correct, grammar_slug}]}`. Each supported language returns its own static bank in the target language.
+- **POST `/submit`** — Rate limit: 10/min. LLM-backed assessment submission endpoint retained alongside the deterministic bank/evaluate flow.
+- **POST `/evaluate`** — Rate limit: 60/min. Deterministic CEFR evaluation (no LLM — groups by difficulty). Body: `{answers: [{question_id, skill, difficulty, correct, dont_know?}]}`. `dont_know` defaults to `false` and marks a declared knowledge gap, which is never scored as correct.
+  Optional UUID header `X-Assessment-Attempt` correlates the measurement signal with `/started`;
+  omission preserves evaluation behavior. A supplied invalid UUID returns 422.
+- **POST `/free-write`** — Rate limit: 10/min. Evaluates free-write text for CEFR placement through LLM JSON parsing.
+- **POST `/complete`** — Rate limit: 10/min. Persists results and creates a StudyPlan. Rejects the same invalid dimensions and undersized grids as `POST /api/study-plan/generate` (422 and 400), before any state change. When `STRIPE_ENABLED=true`, the user is not subscribed, and `assessment_voice_trial_used=false`, the response includes `voice_trial: {available, token, duration_seconds, expires_in_seconds}` for a one-time voice demo. `duration_seconds` comes from `ASSESSMENT_VOICE_TRIAL_DURATION_SECONDS` (default `300`).
+- **POST `/voice-trial`** — Rate limit: 10/min. Body: `{target_language?}`. Regenerates a fresh post-assessment voice demo token for the user's active study plan in that language when `STRIPE_ENABLED=true`, the user is not subscribed, and `assessment_voice_trial_used=false`. Used when the student previously skipped the demo and returns to the assessment page.
+- **GET `/level-test/questions/{plan_id}`** — Rate limit: 5/min. Generates 20-question level test (LLM, constrained to studied content). Returns 403 until the plan reaches its final position with no pending lesson from a passed day, unless a result is already persisted.
+- **POST `/level-test/submit`** — Rate limit: 10/min. Submits level test answers → score + recommendation. Applies the same eligibility rule as question generation and returns 403 before the final position or with pending passed-day lessons, unless a result is already persisted.
+- **GET `/level-test/result/{plan_id}`** — Rate limit: 60/min. Returns test result and recommendation (`"advance"`, `"extend"`, or `"repeat"`). Requires a persisted result; it is not affected by eligibility.
+
+---
+
+## Languages — `/api/languages`
+
+All endpoints require `get_current_user`. These endpoints manage the user's independent target-language study tracks.
+
+- **GET `/api/languages`** — Rate limit: 60/min. Lists all learning languages for the authenticated user.
+- **GET `/active`** — Rate limit: 60/min. Returns the user's active learning language.
+- **POST `/api/languages`** — Rate limit: 60/min. Adds a new target language and initializes the associated language record.
+- **PUT `/active`** — Rate limit: 60/min. Switches the active target language.
+- **DELETE `/{target_language}`** — Rate limit: 5/min. Deletes a target-language track and its associated study data according to backend ownership checks.
+
+---
+
+## Curriculum — `/api/curriculum`
+
+Auth required (`get_current_user`). Returns static curriculum data for all supported target languages.
+
+- **GET `/api/curriculum`** — Rate limit: 60/min. Full curriculum for all CEFR levels. Query param: `language` (BCP-47, default `en-GB`).
+- **GET `/{level}`** — Rate limit: 60/min. Units for a specific CEFR level. Query param: `language` (BCP-47).
+
+---
+
+## Vocabulary — `/api/vocabulary`
+
+Auth required (`get_current_user`). Serves canonical backend vocabulary data organized by language and CEFR level.
+
+- **GET `/api/vocabulary`** — Rate limit: 60/min. Auth: get_current_user. All vocabulary sets for the given language. Query param: `language` (BCP-47, default `en-GB`). Response: `{sets: [{id, level, topic, unit_ref, words: [{word, pos, definition, example, ipa?, frequency_rank?}]}]}`.
+- **GET `/level/{level}`** — Rate limit: 60/min. Auth: get_current_user. Vocabulary sets filtered by CEFR level (A1–C2). Query param: `language` (BCP-47). Returns 400 for invalid levels.
+- **GET `/{set_id}`** — Rate limit: 60/min. Auth: get_current_user. A single vocabulary set by ID. Query param: `language` (BCP-47). Response: `{set: {...}}`. Returns 404 if not found.
+- **POST `/{set_id}/native-help`** — Rate limit: 10/min. Auth: get_current_user. Query param: `language` (BCP-47, default `en-GB`). Generates or returns cached native-language study help for a vocabulary set, keyed globally by set ID, target language, and native language; the source hash determines cache freshness. Response: `{native_help: {summary, study_tips, word_notes, common_traps, mini_glossary, practice_prompts}}`. Returns 404 if the set does not exist and 503 if generation is unavailable or already in progress.
+
+---
+
+## Study Plan — `/api/study-plan`
+
+- **GET `/current`** — Rate limit: 60/min. User's active plan with curriculum progress, including `id` and the persisted `target_language` used to bind vocabulary imports to their plan. Optional `language` selects an owned language's active plan; without it, uses the active language. Returns `null` when no matching plan exists.
+- **POST `/generate`** — Rate limit: 10/min. Creates new plan from CEFR level, goals, and duration. Optional `target_language` selects the language; omission or null uses the active language, then the profile language. Returns 422 when the resolved language is not canonical and operator-enabled (including an explicit empty string), `duration_weeks` or `days_per_week` is below 1, or `cefr_level` is not a level the curriculum covers, and 400 when `duration_weeks × days_per_week − 1` is smaller than the level's curriculum unit count (the detail names the minimum). Language validation precedes curriculum lookup. A rejected request creates no plan, no language row, and does not deactivate the current plan.
+- **GET `/today`** — Rate limit: 20/min. Today's lessons; auto-generates missing content via LLM on first access; auto-advances `progress_day` when all lessons for the current day are complete. The reserved final slot (`completion-test`, or the legacy `level-test` id) is never materialized through the lesson generator: it returns the derived `completion` state (`in_progress`, `ready`, or `taken`) with the persisted result when taken. Legacy final-slot lessons are returned until a result exists; once it does, `pending_count` excludes them. Returns `plan_id`, `cefr_level`, `lessons`, `progress_day`, `total_days`, `pending_count`, `completion`.
+- **POST `/skip-day`** — Rate limit: 60/min. Increments `progress_day` by 1 (capped at `total_days`). Returns `{progress_day, total_days}`.
+- **GET `/pending-lessons`** — Rate limit: 60/min. Returns incomplete lessons from days before `progress_day` (generated but not completed). Once the level-test result is persisted, a legacy final-slot lesson (`completion-test` or `level-test`) is excluded: the final slot presents only the result.
+- **GET `/lessons`** — Rate limit: 60/min. Returns lightweight metadata for every generated lesson in the active plan: `id`, title, type, week, day, unit, and completion state. It does not generate content or mutate progress.
+
+Plan responses from `/current` and `/generate` share `StudyPlanResponse`, including the required
+`target_language` from the persisted plan.
+
+---
+
+## Lessons — `/api/lessons`
+
+Lesson viewing and exercise answering use `get_current_user` (always free). Only completion is gated by `require_subscription_or_freemium("lessons")`.
+
+- **GET `/{lesson_id}`** — Rate limit: 60/min. Auth: get_current_user. Returns `{lesson, exercises, target_language}`; `target_language` comes from the lesson's persisted study plan, independently of the active language. Exercise responses include optional `native_explanation` and `native_hint` copied from generated lesson JSON when available. Lesson content may include enriched vocabulary items with optional native-language translation, example translation, usage note, and reading fields.
+- **POST `/{lesson_id}/start`** — Rate limit: 60/min. Auth: get_current_user. Validates ownership and returns the lesson; no in-progress state is persisted.
+- **POST `/{lesson_id}/complete`** — Rate limit: 60/min. Auth: get_current_user; subscription/freemium quota is checked only when applying the first completion. Locks the lesson row and atomically commits completion, progress, XP, competencies, and eligible unit/level rewards. Checks the level milestone even when the evaluation was recorded before the last teaching lesson, including lessons without a unit. Repeated calls preserve `completed_at`, base lesson XP, completion counters, competencies, and quota, including when the user's freemium quota is exhausted. They can grant a first eligible unit/level reward missing from the ledger, using the resubmission's UTC day. Existing reward keys prevent duplicate credit or new activity on further retries.
+- **POST `/{lesson_id}/native-explanation`** — Rate limit: 10/min. Auth: get_current_user. Generates and caches a native-language explanation for existing lessons at any CEFR level whose `content.native_explanation` is missing. Returned support includes translated text, key points, examples, common traps, and a mini-glossary. If already present, returns the cached explanation idempotently.
+- **POST `/exercises/{id}/native-explanation`** — Rate limit: 10/min. Auth: get_current_user. Generates and caches a concise native-language clarification for an exercise whose target-language `explanation` exists but whose generated JSON lacks `native_explanation`. If already present, returns the cached exercise-level explanation idempotently.
+- **POST `/exercises/{id}/native-hint`** — Rate limit: 10/min. Auth: get_current_user. Generates and caches a concise pre-answer native-language hint for an exercise whose generated JSON lacks `native_hint`. Hints must help without revealing the correct answer. If already present, returns the cached hint idempotently.
+- **POST `/exercises/{id}/question-translation`** — Rate limit: 10/min, including cache hits. Auth: get_current_user with lesson ownership verification. No request body. The exercise ID must be an integer from `1` through `2147483647`; invalid IDs return `422` before the exercise lookup. Returns `{question, question_translation, question_translation_language}` using the displayed, compatibility-normalized question, persisted plan target language, and profile native language. Generates only on a cache miss; works for answered exercises and completed lessons. Returns `404` for missing/unowned resources, `400` without a native language, or `503` for unavailable/invalid generation. Cache matching and preservation rules belong to `study-plan.instructions.md` (Optional question translation).
+- **POST `/exercises/{id}/regenerate`** — Rate limit: 5/hour. Auth: get_current_user. Regenerates one unanswered, technically invalid exercise on demand while preserving the rest of the lesson. Rejects completed lessons, answered exercises, and exercises that pass validation.
+- **POST `/exercises/{id}/answer`** — Rate limit: 20/min. Auth: get_current_user. Submits an answer, evaluates multiple choice, fill, free-write, pronunciation, or listening exercises, and returns score plus feedback. Listening uses deterministic option scoring; incomplete listening exercises return `409`, and answers outside their options return `422`, without saving a score or progress. For free-write exercises the response also carries `corrections` (objects with `original`, `corrected`, `explanation`), which are persisted on the exercise and included in `GET /{lesson_id}` exercise payloads.
+
+Exercise payloads from detail and regeneration also expose optional `question_translation` and
+`question_translation_language`. Detail returns these only when the cached source and native language
+match; missing or obsolete support is represented by null. The nested lesson content remains the saved
+JSON, so consumers use the mapped exercise fields for current question translations.
+
+Detail and regeneration exercise payloads also expose nullable `listening_text` and boolean
+`listening_ready`. Incomplete legacy listening exercises are eligible for regeneration under the
+existing unanswered/incomplete-lesson rules. Listening playback uses `POST /api/tts` with source text
+and the lesson's owning `study_plan_id`, not `/api/listening/audio/{id}`. The source, validation and
+presentation contract belongs to `study-plan.instructions.md` (Listening exercises inside lessons).
+
+---
+
+## Flashcards — `/api/flashcards`
+
+Creation schemas limit `word` to 100 characters and `translation` to 255; the selected `word` in
+`/from-word` is also limited to 100. Manual and bulk input violations return 422 before any insertion,
+including when other bulk items are valid. LLM output for `/generate` and `/from-word` shares these
+limits: structured-output validation requests one corrective retry, then returns 502
+`ai_service_error` if still invalid. No truncation or partial batch persistence is performed.
+For `/from-word`, structured-output validation also cleans the returned word and rejects an empty
+cleaned result before deduplication and insertion. This uses the same corrective retry and 502 error
+path. `/generate` retains its `skipped_empty` behavior for empty normalized batch terms.
+
+- **GET `/due`** — Rate limit: 60/min. Returns `{due,total,cefr_level}` for the active persisted plan. `due` contains non-suspended cards pending review today in SM-2 order; `total` includes suspended cards. `cefr_level` provides the initial generator selection. Session-size selection is local and does not alter the full due-card response.
+- **GET `/all`** — Rate limit: 60/min. All user's flashcards
+- **POST `/api/flashcards`** — Rate limit: 60/min. Creates a flashcard manually.
+- **POST `/bulk`** — Rate limit: 60/min. Requires `{flashcards, study_plan_id, target_language}`. The positive integer plan ID and language must match the authenticated user's active persisted plan at validation time; mismatch returns 409 `flashcard_context_changed` before inserting any cards. Missing or invalid context returns 422. The supplied ID is an expected-context guard, not authorization to write to another plan. Creates multiple cards in that resolved plan and skips normalized-word duplicates within it.
+  New cards with blank translations receive contextual translations in the profile's native language
+  before insertion. Supplied translations are preserved. Existing cards, including missing translations
+  and user edits, are never updated. Incomplete/invalid or unavailable translation returns 503
+  `ai_service_unavailable` without a partial import. Batches accept at most 100 cards and at most 10,000
+  characters per definition/example (422 otherwise). Only the first 300 characters of each contextual
+  field are sent to the translator; stored card text is preserved. Translation, including corrective
+  retry, has a shared 20-second deadline. Native language, active language/plan and duplicates are
+  rechecked before insertion under user-then-language-then-plan locks. Changed context returns 409;
+  lock contention returns 503 `flashcard_import_busy` without waiting or partially importing.
+- **POST `/{card_id}/review`** — Rate limit: 60/min. Requires a strict integer `quality` in 0–5 and a UUID `review_id` (422 otherwise). Identity is scoped to the owned card. Records an SM-2 review, credits vocabulary progress to its persisted `study_plan_id`, and stores the response receipt in one transaction. Repeating the same ID and quality returns the original `FlashcardReviewResponse` without applying scheduling or XP again, including after subsequent reviews or suspension. Reusing the ID with another quality returns 409 `flashcard_review_conflict`. Response fields include the card snapshot and `xp_earned` granted by that original attempt (currently 2); replay does not grant additional XP. New attempts on suspended cards return 409. Missing or foreign cards return 404 before receipt access. Receipt lifetime follows the card.
+- **POST `/generate`** — Rate limit: 20/min. Requests N flashcards via LLM with native-language translations. The backend derives the target language from the authenticated user's active study plan; the request body has no client-supplied `target_language`. Returns `FlashcardGenerationResult`: `flashcards`, `created`, `skipped_duplicates` and `skipped_empty`. Counters describe actual model output after normalization and active-plan deduplication, including duplicates within the generated batch and suspended existing cards. Fewer model results than requested are not counted as duplicates. Empty normalized words have a separate counter. Counters are server-computed, not part of the LLM structured-output schema. Persisted cards and `FlashcardResponse` include the owning plan's `study_plan_id`.
+- **POST `/from-word`** — Rate limit: 30/min. Saves a word as a flashcard: body `{word, context, cefr_level}`. Best-effort deduplication is scoped to the user's active plan, with the oldest matching card winning. Comparison is case-insensitive, collapses Unicode whitespace runs, and trims boundary spaces without changing the persisted word's capitalization. An input match skips the AI; otherwise the AI's canonical word is checked before insertion. Concurrent first-time saves can still both insert. Returns `FlashcardFromWordResponse` (`FlashcardResponse` plus `already_saved: bool`): `true` means the card is already in My Vocabulary (`source="from_text"`). Generated/imported cards are promoted in place with `UPDATE RETURNING` and return `false`, preserving review progress. If a card disappears before promotion, the request continues as a miss; response data is captured before commit without a subsequent refresh.
+  Optional `lesson_id` binds saves from lesson-linked voice practice to an owned completed lesson. When non-null, it must be a strict JSON integer in `1..2147483647` (otherwise HTTP 422). The backend verifies lesson, plan, and language-track ownership; unavailable or incomplete lessons return HTTP 404 without falling back to the active plan. Lookup language and CEFR level, deduplication, and storage use the lesson's persisted plan, including historical plans. Omitted or null `lesson_id` preserves active-plan behavior.
+- **GET `/vocabulary`** — Rate limit: 60/min. Query params: `page`, `limit`, and optional `search`. Returns active-plan saved vocabulary ordered case-insensitively by word as `{items,total,page,pages}`.
+- **GET `/library`** — Rate limit: 60/min. Same paginated response, including every card in the active plan. Accepts `source=all|from_text` (default `all`), `status=all|due|new|suspended` (default `all`), `page`, `limit` (1–100), and literal case-insensitive `search` across word and translation. Due and new filters exclude suspended cards; new means `interval=0` and `repetitions=0`. Ordering is normalized word then ID; pages beyond the last page are clamped. Responses include `is_suspended` and `next_review`.
+- **PUT `/{card_id}`** — Rate limit: 60/min. Replaces word, definition, example_sentence and translation on an owned card, including cards from historical plans. Trims boundary whitespace; word (1–100 characters) and definition (1–10000) are required; example (0–10000) and translation (0–255) may be empty. Unknown fields are rejected. A renamed word matching another card in its persisted plan returns 409 `flashcard_duplicate`; this is best-effort deduplication. Existing duplicate names do not prevent editing other content. Ownership, source, suspension and SM-2 progress are preserved.
+- **PUT `/{card_id}/suspension`** — Rate limit: 60/min. Accepts `{is_suspended: boolean}` and returns the owned card. Suspension and reactivation preserve review dates, intervals, ease and repetitions and award no XP. Reactivated overdue cards become due immediately. Saving the same word through existing creation flows does not reactivate a suspended card.
+- **GET/PUT `/preferences`** — Rate limit: 60/min. Reads or replaces `{back_content: "definition"|"translation"}` for the authenticated account, globally across study languages. Defaults to `definition`; no active plan is required. The standard review uses definition when a translation is missing and retains complementary content. This preference applies only to standard-mode content.
+- **DELETE `/{card_id}`** — Rate limit: 60/min. Permanently deletes a flashcard owned by the user; 204 No Content
+
+Review receipt replays return the original successful response. Measurement rules for replays are
+defined in `umami.instructions.md`.
+
+---
+
+## Grammar — `/api/grammar`
+
+All endpoints require `get_current_user`.
+
+- **GET `/api/grammar`** — Rate limit: 60/min. Auth: get_current_user. Returns all grammar topics for the given target language. Query param: `language` (BCP-47, default `en-GB`). Response: `{topics: [{slug, title, level, category, summary, explanation, structure, rules, examples, common_mistakes, related}]}`.
+- **GET `/{slug}`** — Rate limit: 60/min. Auth: get_current_user. Returns a single grammar topic by slug. Query param: `language`. Returns 404 if not found.
+- **POST `/{slug}/native-help`** — Rate limit: 10/min. Auth: get_current_user. Query param: `language` (BCP-47, default `en-GB`). Generates or returns cached native-language study help for a static grammar topic, keyed globally by grammar slug, target language, and native language; the source hash determines cache freshness. Response: `{native_help: {summary, explanation, key_points, examples, common_traps, mini_glossary}}`. Returns 404 if the topic does not exist and 503 if generation is unavailable or already in progress.
+
+---
+
+## Chat — `/api/chat`
+
+Chat endpoints require authentication and maintenance/access policy. Conversation/history reads use the read-only subscription/freemium dependency, which remains available after consumable quota is exhausted when the feature limit is nonzero. Sending a message uses the consumable dependency. Memory management is separate and requires authentication only.
+
+- **GET `/conversations`** — Rate limit: 60/min. Lists user's conversations (text + voice), ordered by `updated_at` desc. Response includes `source` (`chat` or `voice`).
+- **POST `/conversations`** — Rate limit: 60/min. Creates a new conversation.
+- **DELETE `/conversations/{id}`** — Rate limit: 60/min. Deletes a conversation and its messages (CASCADE).
+- **GET `/conversations/{id}/messages`** — Rate limit: 60/min. Returns messages for a conversation.
+- **POST `/api/chat`** — Rate limit: 30/min. Sends a message and streams Lingu's response as SSE. Events can contain `conversation_id`, `token`, `memory_updated`, `response_reset`, `done`, or `error`. `response_reset=true` instructs the client to discard text already emitted for the current assistant turn before consuming a complete no-tools fallback. A confirmed committed memory can emit `memory_updated=true` before a later reset or terminal error. Only non-empty completed responses are persisted as assistant history.
+- **GET `/history`** — Rate limit: 60/min. Returns the authenticated user's chat history.
+
+Written assistant responses may contain optional Markdown bold, italics, bullet/numbered lists and
+paragraphs. SSE tokens and persisted/history `content` retain the original text; rendering and spoken
+conversion are separate consumers. Text-only voice history remains compatible.
+
+---
+
+## Progress — `/api/progress`
+
+The summary also returns `today_xp` and `activity_week`: seven chronological UTC-day objects with
+`date` (ISO date), `active` (whether a daily progress row exists), and `xp` (daily credit), ending today.
+Zero-XP activity counts. `current_streak` is zero if the latest entry is older than yesterday. Empty
+plans return seven inactive days. Reward rules live in `learning-resources.instructions.md`; rewards
+are server-triggered by persisted activity and have no client-claim endpoint.
+
+- **GET `/summary`** — Rate limit: 60/min. Streak, XP, skills breakdown, and current-level vocabulary progress for the active study language.
+- **GET `/history`** — Rate limit: 60/min. Up to the 90 most recent daily progress rows for the active plan; no calendar-date cutoff is applied.
+- **GET `/competencies`** — Rate limit: 60/min. Unit-level competency aggregates: average score, mastered count, and total count.
+
+`GET /api/progress/summary` returns totals scoped to the active study plan/language: `total_xp`, `current_streak`, `total_lessons`, `total_exercises`, `exercises_correct`, `accuracy`, `skills`, plus vocabulary summary fields for the plan's current CEFR level and `target_language`: `vocabulary_level`, `vocabulary_mastered`, `vocabulary_total`, and `vocabulary_progress`. Vocabulary progress counts words from the current level's backend vocabulary sets whose flashcard exists in the active `study_plan_id` with `repetitions > 0`.
+
+---
+
+## TTS — `/api/tts`
+
+Requests with `conversation_id` convert the supplied text from Markdown to plain spoken content
+after validating ownership and resolving the persisted language. They omit presentation markers,
+preserve words and block boundaries, and return `422` if no speakable content remains. Plan-only and
+context-free requests retain literal-text synthesis. This does not alter the WebSocket voice pipeline.
+
+- **POST `/api/tts`** — Rate limit: 20/min. Auth: get_current_user. Text → audio using the selected TTS provider: Gemini returns WAV (`audio/wav`), local/OpenAI return MP3 (`audio/mpeg`). Accepts text, optional voice, and optionally one of `study_plan_id` or `conversation_id` (strict positive PostgreSQL-range IDs). Invalid/conflicting context returns 422; missing/foreign resources return 404. Invalid supplied Gemini voices return 400; valid choices are `female` and `male`. Pronunciation language comes from the owned plan, or from the conversation's owned plan when present and its stored target language otherwise. Without context, Gemini and instruction-capable OpenAI models infer languages from the text without imposing a regional accent. Supports optional trace correlation via `X-TTS-Trace-ID` and returns timing headers.
+- **GET `/preview/{voice}`** — Rate limit: 60/min. Auth: get_current_user. Returns a short cached/generated preview for an OpenAI voice (MP3) or Gemini `female`/`male` (WAV), with the adapter's MIME type. Local TTS returns 404; invalid voices return 400. Instruction-capable OpenAI models use synthesis-specific cache keys including model and instructions; other OpenAI models retain voice-only cache files. Gemini uses separate hashed WAV files with the synthesis identity defined in `speech-services.instructions.md`. Responses use `Cache-Control: no-store`, and Settings bypasses its browser HTTP cache so playback consults the backend disk cache.
+- **POST `/tour/{locale}/{step}`** — Rate limit: 20/min. Auth: get_current_user. Returns persistent narration in the adapter's format/MIME type for dashboard-tour text localized by the frontend through i18n. Accepts a supported UI locale, `step1`–`step7`, and a JSON body with `text` (1–5000 characters) and optional OpenAI voice or Gemini `female`/`male`; local TTS ignores that preference. Unknown locale/step returns 404, invalid text 422, invalid OpenAI/Gemini voice 400, unavailable synthesis 503, and the 60-second generation deadline 504. Cache identity includes the supplied text, locale, effective provider/model/actual voice/speed, format, and style or pronunciation instructions when supported. Gemini files use `.wav`; local/OpenAI use `.mp3`. Files are shared across users, generation is serialized across workers, and responses use `Cache-Control: no-store` to reconsult the version-aware disk cache.
+
+---
+
+## STT — `/api/stt`
+
+- **POST `/api/stt`** — Rate limit: 20/min. Authenticated multipart request with required `audio` and PostgreSQL-range positive integer `study_plan_id` fields. The backend verifies that the study plan belongs to the authenticated user, derives its BCP-47 `target_language`, converts it to an ISO 639-1 code, and passes that code explicitly to faster-whisper or OpenAI STT according to `STT_PROVIDER`. Returns `{ "text": string }`; returns 404 for a missing or foreign plan, 413 when audio exceeds 50 MiB, 422 for missing/invalid multipart fields, and 503 when STT is unavailable. Pronunciation lessons use the lesson's plan ID and flashcard speaking mode captures the current card's plan ID when recording starts, so stale active-language UI state cannot change the transcription language.
+
+---
+
+## Contact — `/api/contact`
+
+- **POST `/api/contact`** — Rate limit: 5/hour. Submits a contact form. Body: `{ email, subject, description }`. Forwards the message to `CONTACT_EMAIL` via SMTP. Returns 204 on success, 502 if email sending fails. No auth required.
+
+---
+
+## WebSocket — `/ws/conversation`
+
+Full-duplex voice conversation pipeline.
+
+Both `POST /api/conversation/warmup` and `/ws/conversation` require an authenticated user with subscription or freemium access when `STRIPE_ENABLED=true`, except for a valid post-assessment voice trial token. Both reject non-admin users while maintenance mode is active.
+
+- **POST `/api/conversation/warmup`** — Rate limit: 20/min. Performs parallel best-effort TTS and STT probes within a shared 60-second budget before opening the WebSocket. Logs individual failures or budget exhaustion, cancels unfinished probes at the deadline, and returns ready even when probes fail or time out; this is not a strict provider-health check. A dedicated Next.js proxy forwards authentication and the request body with a 70-second deadline (504 on proxy timeout); the conversation client uses a 75-second abortable request timeout. Optional body: `{trial_token}`.
+
+Voice-access denial preserves HTTP 402 with `detail: "subscription_required"` for warmup and
+WebSocket `type: "error", code: "subscription_required"` followed by close 1008. Both add top-level
+`reason: "freemium_exhausted" | "freemium_unavailable"` and `feature: "voice"`. `remaining` and
+`limit` are seconds and appear only when the quota check returned a known result; infrastructure
+failure never fabricates a zero balance. A later demo-validation failure can report unavailability
+alongside a known quota balance. Clients must inspect the reason rather than treating the legacy
+detail/code as proof of exhaustion.
+
+**Authentication**: After the handshake, the client must send a JSON object containing a valid `token` within 10 seconds. The backend reads the token but does not require the `type` field to equal `auth`. Missing, malformed, or invalid authentication closes with code 1008.
+
+**Message flow**: Client sends audio chunks → STT transcription → LLM generates full response → sentence-level TTS → binary audio chunks returned (Gemini WAV or local/OpenAI MP3). The server starts the greeting as a cancellable task and immediately enters the receive loop; backend barge-in protocol remains available, while the current frontend ignores user speech during active tutor turns for stability.
+
+**Client → Server message types:**
+
+- **authentication JSON** — Payload may contain `type`, required `token`, `voice`, `target_language`, `context`, `voice_trial_token`, numeric `conversation_id`, and optional positive integer `lesson_id`. It authenticates and can reuse an owned conversation outside lesson practice. Trial sessions require the atomic demo claim when that access path is selected; claim/credential/commit failure emits `type: "error", code: "internal_error"` and closes with 1011 before conversation creation. Invalid OpenAI or Gemini voice choices fall back to the configured provider default; Gemini choices are `female` and `male`.
+- **Free-conversation language** — An explicit `target_language` must be an exact supported code. Omission or null resolves the active language, then `en-GB`; the resolved value is also validated. Invalid values emit `error` with `code=invalid_target_language` and close 1008 before general session quota consumption or conversation creation. Only an owned active plan in the resolved language supplies the level and plan reference; without one, the session uses A2 and a null plan reference. Full resolution policy is defined in `voice-conversation.instructions.md`.
+- **Lesson practice** — When `lesson_id` is present, the server requires a completed lesson belonging to the authenticated user. Its persisted plan determines language, level, and provenance; client `context`, `target_language`, and `conversation_id` do not override them. Invalid IDs (including null, booleans, strings, and fractional numbers), missing, foreign, or incomplete lessons emit `error` with `code=lesson_practice_unavailable` and close 1008 before consuming general session quota. Each start creates a voice conversation titled with a localized `Practice: {lesson title}`. Lesson context remains in the voice system prompt throughout the session. Existing access, maintenance, quota, timeout, and transcript rules apply; a verbal completion suggestion never emits a new control event.
+  IDs must be in `1..2147483647`, matching the lesson's database column. The WebSocket rejects out-of-range IDs before lesson SQL lookup, and the frontend applies the same range before loading lesson metadata.
+- **binary frame** — Payload: raw audio bytes. Description: WAV audio chunk from VAD
+- **`interrupt`** — Payload: `{"type":"interrupt"}`. Description: Optional manual interruption; cancels current generation
+
+**Server → Client message types:**
+
+- **`status`** — Pipeline state hint; turn-associated frames can include `turn_id`.
+- **`transcript`** — User STT result and assistant streaming/final text; turn-associated frames can include `turn_id`.
+- **binary frame** — Payload: native WAV bytes for Gemini or MP3 bytes for local/OpenAI. One synthesized TTS fragment, without additional metadata or control frames.
+- **`barge_in`** — Payload: `{}`. Description: Current greeting/response was cancelled by new audio; client cancels playback
+- **`interrupted`** — Indicates interruption/cancellation of the active turn.
+- **`memory_updated`** — Confirms a memory save committed during the turn.
+- **`turn_complete`** — Assistant turn fully processed; includes the associated turn ID when available.
+- **`session_warning`** — Payload: `{"remaining_seconds": N, "reason": "inactivity" | "max_duration"}`. Description: Timeout warning at 60 s
+- **`session_end`** — Payload: `{"reason": "..."}`. Description: Session closed by server
+- **`error`** — Payload: `{"code":"...","message":"..."}`. Description: Pipeline or policy error
+
+**Features:**
+
+- **Barge-in protocol**: explicit interrupts or new audio input can cancel the initial greeting or any ongoing LLM/TTS response server-side; the current frontend disables automatic interruption during active tutor turns
+- **Empty STT guard**: empty/whitespace transcriptions are ignored and do not trigger an assistant reply
+- **Serialized server sends**: JSON frames, binary audio chunks, timeout warnings, and close frames are written through one send lock to avoid concurrent WebSocket writes
+- **VAD**: browser-level voice activity detection with `@ricky0123/vad-react`, Silero VAD v5, and ONNX WASM configured with one thread. Installation and lifecycle rules live in `voice-conversation.instructions.md`.
+- **Gapless playback**: `AudioQueue` schedules consecutive `AudioBufferSourceNode`s
+- **Session timeouts**: max duration (default 30 min) and inactivity (default 3 min), each with 60 s warning
+- **History**: a bounded in-memory buffer supplies LLM context; complete transcript messages are persisted in `chat_history` under the parent conversation.
+- **Warmup**: `POST /api/conversation/warmup` pre-heats TTS and STT models before opening the WebSocket
+
+---
+
+## Listening — `/api/listening`
+
+Listening reads use read-only subscription/freemium access; generation and attempt submission use consumable access. Maintenance policy remains backend-enforced. Audio paths are rebuilt from configured storage, integer exercise IDs, and the persisted allowlisted `.mp3` or `.wav` extension, never an arbitrary database path.
+
+Both comprehension domains expose `context: {study_plan_id, target_language, level}` and nullable
+`generation_remaining_seconds` in `/next` responses, in addition to the fields below. Remaining time
+is calculated on the server. Both `/next` and `/generate` accept optional `expected_study_plan_id`,
+`expected_target_language`, and `expected_level`. They are compared with the authenticated user's
+persisted active plan; a mismatch returns 409 `study_context_changed` before pool lookup or generation.
+These parameters cannot select or authorize a different plan.
+
+For both Listening and Reading, `/attempt` requires body `context: {study_plan_id, target_language,
+level}` from the exercise lookup or history response. The backend independently resolves the user's
+active plan and rejects mismatches with `409 study_context_changed` before writing attempts, XP,
+exercise counters, or quota usage. The exercise language must match that plan; its level must also
+match for normal attempts. Replays can retain an earlier exercise level in the same language and
+earn 5 XP once per exercise/plan/UTC day when a prior-day attempt exists in that plan, otherwise zero.
+Missing context returns `422`. History responses include the active plan's `context` so
+replays retain the selection under which their history was loaded.
+
+Both domains also expose `POST /started` as described below. Its body is
+`{exercise_id: positive integer, context: {study_plan_id, target_language, level}, replay: boolean=false}`
+and its required `X-Exercise-Attempt` header is a UUID. Extra top-level body fields and missing/invalid input
+return 422. The server verifies the active owned plan/context and exercise language; normal starts
+also require the exercise level to match, while replays may use another level in the same language.
+Missing exercises return 404; context mismatches return 409 `study_context_changed`.
+It records no learning attempt, awards no XP, and consumes no feature quota. A 204 response does not
+guarantee analytics delivery. `/attempt` accepts the same header optionally for measurement correlation;
+an invalid supplied UUID returns 422, and omission preserves attempt, XP, and quota behavior.
+
+- **GET `/next`** — Rate limit: 60/min. Returns immediately with `{available, exercise, generation_status, generation_error, generation_deadline}`; transcript and correct answers are omitted. Status is `idle`, `generating`, or `failed`; error is null, `timeout`, `generation_failed`, or `interrupted`; deadline is nullable UTC. Available exercises take priority. A supplied `wait` parameter does not enable long-polling.
+- **POST `/generate`** — Rate limit: 5/min. Optional `voice` query parameter; local Kokoro ignores it and uses its configured voice. Gemini accepts `female` or `male` and rejects an invalid supplied choice with 400 before background generation. Acquires a renewable, owner-scoped language/level generation lease and returns HTTP 202 `{"status":"generating"}` whether it starts work or finds an existing job. Returns `{"status":"available"}` without generating when the user's pool already has an exercise.
+- **POST `/started`** — Rate limit: 20/min. Auth: require_subscription_or_freemium_readonly,
+  with maintenance and active-plan checks. Accepts the shared start-signal body/header above and returns 204.
+- **GET `/audio/{exercise_id}`** — Rate limit: 60/min. Auth: require_subscription_or_freemium_readonly. Serves the exercise's persisted MP3 (`audio/mpeg`) or WAV (`audio/wav`) as a `FileResponse`. The saved extension determines format independently of the current provider, preserving existing MP3 playback. Returns 404 if the exercise or its audio file does not exist.
+- **POST `/attempt`** — Rate limit: 20/min. Body: `{exercise_id, answers: dict[str,str], replay: bool=false, context}`. Returns `attempt_id`, score, XP, correct answers, and transcript. Initial duplicate attempts return 409; replay persists with the spaced-reward rules above. Attempt, reward, and daily activity commit together.
+- **POST `/attempts/{attempt_id}/questions/{question_index}/explanation`** — Rate limit: 10/min,
+  including cache hits. Auth: read-only subscription/freemium access plus maintenance. No body.
+  Requires an owned saved attempt and owned persisted plan with matching exercise language;
+  neither the active language nor a caller-supplied language determines ownership. Returns
+  `{explanation, evidence, native_language, target_language}`. Native language comes from the profile;
+  evidence is a literal source quote. Missing/foreign attempts or questions return 404; IDs outside the
+  positive PostgreSQL integer range (question indices allow zero) return 422; busy/unavailable/invalid
+  generation returns 503. No attempt, progress or quota is consumed. Shared cache/generation behavior is
+  defined in `services.instructions.md` (Comprehension review help).
+- **GET `/history`** — Rate limit: 60/min. Auth: require_subscription_or_freemium_readonly. Returns paginated list of the user's past attempts with scores, XP, and transcripts. Query params: `skip` (default 0), `limit` (default 10, max 50).
+
+## Reading — `/api/reading`
+
+Reading reads use read-only subscription/freemium access; generation and attempt submission use consumable access. Exercise text is returned immediately and there is no audio endpoint.
+
+- **GET `/next`** — Rate limit: 60/min. Auth: require_subscription_or_freemium_readonly. Returns immediately with the oldest uncompleted `ReadingExercise` for the current plan's CEFR level and language. Text and questions are included, correct answers are omitted. Response: `{available, exercise, generation_status, generation_error, generation_deadline}`, with the same status contract as Listening. A supplied `wait` parameter does not enable long-polling.
+- **POST `/generate`** — Rate limit: 5/min. Auth: require_subscription_or_freemium. Acquires a renewable, owner-scoped per-(level, language) Redis lease and enqueues a bounded `BackgroundTask`. Returns HTTP 202 `{"status":"generating"}` for new or existing work, or `{"status":"available"}` when an exercise can already be used.
+- **POST `/started`** — Rate limit: 20/min. Auth: require_subscription_or_freemium_readonly,
+  with maintenance and active-plan checks. Accepts the shared start-signal body/header above and returns 204.
+- **POST `/attempt`** — Rate limit: 20/min. Body: `{exercise_id, answers: dict[str,str], replay: bool=false, context}`. Returns `attempt_id`, score, XP, and correct answers. Initial duplicate attempts return 409; replay persists with the spaced-reward rules above. Attempt, reward, and daily activity commit together.
+- **POST `/attempts/{attempt_id}/questions/{question_index}/explanation`** — Rate limit: 10/min.
+  Same post-attempt explanation contract as Listening above, using owned Reading attempts and passages.
+- **GET `/history`** — Rate limit: 60/min. Auth: require_subscription_or_freemium_readonly. Returns paginated list of the user's past attempts with scores, XP, exercise text, and correct answers. Query params: `skip` (default 0), `limit` (default 10, max 50).
+
+---
+
+## Feedback — `/api/feedback`
+
+All endpoints require `get_current_user`. Status update requires `require_admin`. Every embedded entry or comment `author` object contains `{id, username, display_name, role}` so clients can identify administrator-authored content.
+
+- **GET `/api/feedback`** — Rate limit: 60/min. Auth: get_current_user. Returns paginated list of feedback entries. Query params: `q` (search by title, description, username, or display name; max 100 chars), `type` (`feature`\|`bug`), `status` (`pending`\|`planned`\|`in_progress`\|`done`\|`declined`), `sort` (`votes`\|`date`, default `votes`), `order` (`asc`\|`desc`, default `desc`), `skip` (default 0), `limit` (default 10, max 100). Ordering uses entry ID as a deterministic tie-breaker in the requested direction. When `status` is omitted, entries with `status=done` or `status=declined` are excluded from the public board and admin queue; each is returned only with its respective status filter. Response: `{items, total, skip, limit}`. Each item includes `voted_by_me`, `unread_by_me`, and `comment_count` fields injected server-side.
+- **POST `/api/feedback`** — Rate limit: 10/hour. Auth: get_current_user. Creates a new feature request or bug report. Body: `{type, title, description}`. Returns HTTP 201 + the created entry.
+- **GET `/unread-summary`** — Rate limit: 60/min. Auth: get_current_user. Returns `{unread_count}` for the authenticated user's unread feedback threads. Counts threads with new entries or comments from other users, including `done` entries, and does not expose read state for other users.
+- **GET `/{id}`** — Rate limit: 60/min. Auth: get_current_user. Returns a single entry with its full comment thread ordered by `created_at ASC`, including `unread_by_me` for the current user.
+- **POST `/{id}/read`** — Rate limit: 60/min. Auth: get_current_user. Creates or updates the current user's read marker for that single feedback thread only. Returns `{entry_id, last_read_at}`.
+- **DELETE `/{id}`** — Rate limit: 60/min. Auth: get_current_user. Deletes an entry. Author can delete their own; admin can delete any. Cascade-deletes all votes and comments. Returns HTTP 204.
+- **POST `/{id}/vote`** — Rate limit: 60/min. Auth: get_current_user. Toggles the authenticated user's vote on a feature request. Returns `{voted: bool, vote_count: int}`. Returns 400 if entry type is `bug`.
+- **PATCH `/{id}/status`** — Rate limit: 60/min. Auth: require_admin. Updates the entry status. Body: `{status}`. Valid values: `pending`, `planned`, `in_progress`, `done`, `declined`. Returns the updated entry.
+- **GET `/{id}/comments`** — Rate limit: 60/min. Auth: get_current_user. Returns all comments for an entry ordered by date ASC. Response: `{items, total}`.
+- **POST `/{id}/comments`** — Rate limit: 20/hour. Auth: get_current_user. Adds a comment to an entry. Body: `{body}` (max 2000 chars). Returns HTTP 201 + the created comment.
+- **DELETE `/{id}/comments/{cid}`** — Rate limit: 60/min. Auth: get_current_user. Deletes a comment. Author can delete their own; admin can delete any. Returns HTTP 204.
+
+## Reviews — `/api/reviews`
+
+User review endpoints. Admin moderation endpoints live under `/api/admin/reviews`.
+
+- **GET `/me`** — Rate limit: 60/min. Auth: get_current_user. Returns `{has_review, review}` for the authenticated user. `review` is `null` when the user has not submitted one.
+- **POST `/api/reviews`** — Rate limit: 5/hour. Auth: get_current_user. Creates the authenticated user's single review and queues an admin email notification to `CONTACT_EMAIL` when email is configured. Body: `{rating: 1-5, comment?: string}`. Stores display-name and active-learning-language snapshots server-side, creates with `is_approved=false`, returns HTTP 201, and returns HTTP 409 with `review_already_exists` if the user already has a review.
+- **PATCH `/me`** — Rate limit: 10/hour. Auth: get_current_user. Updates the authenticated user's existing review. Body: `{rating: 1-5, comment?: string}`. Refreshes display-name and active-learning-language snapshots, resets `is_approved=false`, returns the updated review, and returns HTTP 404 with `review_not_found` if the user has not submitted one yet.
+- **DELETE `/me`** — Rate limit: 10/hour. Auth: get_current_user. Deletes the authenticated user's existing review and returns HTTP 204. Returns HTTP 404 with `review_not_found` if the user has not submitted one yet.
+- **GET `/public`** — Rate limit: 60/min. Public. Returns approved landing reviews only (`is_approved=true` and `rating >= 4`) with a non-null, non-empty comment, ordered newest-first. The comment filter is applied before the limit. Query param: `limit` (default 50, max 50). The landing carousel requests 50 reviews. Response omits `user_id` and `is_approved`.
+- **GET `/public/summary`** — Rate limit: 60/min. Public. Returns `{total, average_rating}` over all approved ratings, including one- to three-star ratings and ratings without comments. No collection limit or language filter. Without approved ratings, returns `{total: 0, average_rating: null}`. The landing uses this aggregate independently of the carousel for its average and rating count, with five-minute revalidation.
+
+## Memories — `/api/memories`
+
+All endpoints require `get_current_user` only. Memory management is not subscription-gated or maintenance-gated so every authenticated user can inspect and control stored personal context.
+
+- **GET `/api/memories`** — Rate limit: 60/min. Returns all global memories for the authenticated user, oldest-first. Response: `{memories: [{id, content, source, created_at}]}`.
+- **POST `/api/memories`** — Rate limit: 10/min. Creates one trimmed 1-200 character memory with source `manual`. Returns HTTP 201, or 409 `memory_already_exists` for an exact duplicate.
+- **DELETE `/{id}`** — Rate limit: 60/min. Deletes a single memory by ID. Returns HTTP 204. Returns 404 if not found or not owned by the user.
+- **DELETE `/api/memories`** — Rate limit: 10/min. Clears all global memories for the authenticated user. Response: `{deleted: int}`.
+
+---
+
+## Phrasebook — `/api/phrasebook`
+
+All endpoints require `get_current_user`.
+
+- **GET `/api/phrasebook`** — Rate limit: 60/min. Auth: get_current_user. Returns all phrasebook categories for the given target language. Query param: `language` (BCP-47, default `en-GB`). Response: `{categories: [{id, level, situation, icon, phrases: [{text, context, register, unit_ref, romanization?}]}]}`.
+- **GET `/level/{level}`** — Rate limit: 60/min. Auth: get_current_user. Returns phrasebook categories filtered by CEFR level (A1–C2). Returns 400 for invalid levels. Query param: `language`.
+- **GET `/{category_id}`** — Rate limit: 60/min. Auth: get_current_user. Returns a single phrasebook category by ID. Query param: `language`. Returns 404 if not found.
+- **POST `/{category_id}/native-help`** — Rate limit: 10/min. Auth: get_current_user. Query param: `language` (BCP-47, default `en-GB`). Generates or returns cached native-language study help for a phrasebook category, keyed globally by category ID, target language, and native language; the source hash determines cache freshness. Response: `{native_help: {summary, usage_tips, register_notes, phrase_notes, common_traps, mini_glossary}}`. Returns 404 if the category does not exist and 503 if generation is unavailable or already in progress.
+- **GET `/audio/{category_id}/{phrase_index}`** — Rate limit: 30/min. Auth: get_current_user. Returns cached TTS audio for a specific phrase: Gemini WAV (`audio/wav`) or local/OpenAI MP3 (`audio/mpeg`). Generates and caches on first request; subsequent requests serve from disk. Query param: `language` (default `en-GB`) must be an exact supported target-language code; otherwise returns 400 before catalog lookup, filesystem access, or synthesis. The validated language is also passed to synthesis for pronunciation guidance when supported. Instruction-capable OpenAI models use synthesis-specific cache keys including model and instructions. Gemini uses separate hashed WAV files including provider, model, actual voice, locale, style, text, and format. Responses use `Cache-Control: no-store` so browser caches do not mask synthesis changes. Returns 404 if category or phrase index not found, 503 if TTS service unavailable.

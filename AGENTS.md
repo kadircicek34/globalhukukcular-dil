@@ -1,0 +1,167 @@
+# AGENTS.md — FreeLingo
+
+**Current version: 1.13.5**
+
+## Project
+
+- Monorepo: `backend/` (Python 3.14, FastAPI) and `frontend/` (Next.js 16 App Router), with PostgreSQL 16 and Redis 7.
+- The backend owns business logic and proxies every external service; the frontend must not call LLM, TTS, or STT providers directly.
+- The AI tutor persona is Lingu.
+- Specifications describe current behavior. Release history belongs only in `CHANGELOG.md`.
+
+## Non-negotiable invariants
+
+- Users can learn multiple languages simultaneously. Each language has isolated plans, progress, flashcards, conversations, competencies, and learning attempts.
+- Profile, settings, subscription, quotas, conversation limits, and LLM memories are global per user. `memories.study_plan_id` records provenance only.
+- The canonical default target language is `en-GB`. `en-US` is supported but is never a fallback default.
+- Resource-owned operations derive language and progress ownership from their persisted study plan, not mutable client state.
+- Resource-owned STT requires a user-owned study plan and always sends an explicit recognition language.
+- Access authorization is enforced by the backend. Frontend flags and route guards are presentation/navigation aids only.
+- The backend auth design, refresh-token rotation, and storage rules in `specs/platform.instructions.md` must not be weakened.
+- TTS and STT are required platform services; provider contracts live in `specs/speech-services.instructions.md`.
+
+## Visual conventions
+
+- Preserve the solid blue-tinted visual system, petroleum-blue identity accent, `fl-*` tokens, theme behavior, and monochrome controls. Do not introduce dot grids or hero gradients.
+- Use Geist Sans (`font-sans`) for interface and Latin learned-language text, and Geist Mono (`font-code`) for branding, versions, and technical text.
+- Render learned-language content through `TargetLanguageText`; retain the established CJK fonts, spacing, and readable text sizing.
+- Follow existing components and interaction patterns before creating new presentation abstractions.
+
+## Documentation workflow
+
+Any code change affecting behavior, models, endpoints, configuration, or dependencies requires the affected specifications and project documentation to stay synchronized.
+
+1. Identify and list affected docs before closing the task.
+2. State exactly which spec or Markdown files need changes and obtain explicit user approval before editing them.
+3. Keep specs focused on current structure, behavior, invariants, and operating rules. Specs are not a change history. Do not add release narratives or validation logs.
+4. Record user-visible changes in `CHANGELOG.md`. For changes not yet in production, explicitly ask the user whether a changelog entry is warranted before adding one; documenting intermediate changes may not make sense.
+5. Follow `specs/version.md` when a version bump is warranted.
+6. Do not use Markdown tables in long-form project docs or specs; use concise lists.
+7. Keep one canonical specification for each contract and reference it from other specs. Before removing a duplicate, confirm that its relevant rules remain in the owning spec. When adding or reorganizing specs, update this index and affected cross-references.
+
+Common documentation targets:
+
+- Endpoint or rate-limit changes: `api-endpoints.instructions.md`, `rate-limiting.instructions.md`.
+- Model or migration changes: `database-models.instructions.md`, `architecture-backend.instructions.md`.
+- Service, provider, or environment changes: `services.instructions.md`, `architecture-backend.instructions.md`, `docker.instructions.md`, and possibly `README.md`.
+- Auth or cross-system flow changes: `platform.instructions.md`, `architecture.instructions.md`.
+- Frontend structure changes: `architecture-frontend.instructions.md` and the affected domain spec.
+- Interface/native-language additions: follow `add-ui-native-language.instructions.md` for the coordinated implementation and documentation checklist.
+- Public landing or static project-site content, navigation, and presentation: `public-site.instructions.md`.
+- Public indexing, metadata, canonical URLs, sitemap, robots, and structured data: `seo.instructions.md`.
+- Shared Listening/Reading generation: `services.instructions.md` owns the backend coordinator; `architecture-frontend.instructions.md` owns the shared client. Keep domain-specific content, audio, scoring, and history in `listening.instructions.md` and `reading.instructions.md`.
+- Study plan, lesson, or progress changes: `study-plan.instructions.md`, `learning-resources.instructions.md`, `api-endpoints.instructions.md`.
+- New major domain: add a domain-oriented spec, then update `README.md`, this file, and `CHANGELOG.md` as applicable.
+
+## Authoritative specifications
+
+Use the narrowest relevant spec first:
+
+- Architecture: `architecture.instructions.md`, `architecture-backend.instructions.md`, `architecture-frontend.instructions.md`.
+- Public landing and static project site: `public-site.instructions.md`.
+- Technical SEO and Search Console: `seo.instructions.md`.
+- Platform and languages: `platform.instructions.md`, `target-language.instructions.md`, `multi-language.instructions.md`, `add-target-language.instructions.md`, `add-ui-native-language.instructions.md`.
+- Learning: `study-plan.instructions.md`, `learning-resources.instructions.md`, `listening.instructions.md`, `reading.instructions.md`, `games.instructions.md`.
+- Speech and AI: `speech-services.instructions.md`, `voice-conversation.instructions.md`, `memories.instructions.md`, `prompts.instructions.md`, `llm-error-handling.instructions.md`.
+- Access and community: `subscriptions-freemium.instructions.md`, `feedback.instructions.md`, `reviews.instructions.md`, `whats-new.instructions.md`.
+- Contracts and operations: `database-models.instructions.md`, `services.instructions.md`, `api-endpoints.instructions.md`, `rate-limiting.instructions.md`, `docker.instructions.md`, `umami.instructions.md`.
+- Project maintenance: `testing.instructions.md`, `readme.instructions.md`, `changelog.instructions.md`, `version.md`.
+
+## Specialized OpenCode reviews
+
+Project reviewers live in `.opencode/agents/`. They inherit the parent model and use read-only
+discovery tools; shell commands, edits, external tools, and further delegation are disabled.
+
+- `study-plan-reviewer`: placement, curriculum scheduling, lessons, progression, and completion.
+- `practice-reviewer`: Reading, Listening, games, flashcards, and learning resources.
+- `conversation-reviewer`: Lingu conversations, streaming, voice, speech services, and memories.
+- `access-reviewer`: authentication, authorization, subscriptions, quotas, and rate limits.
+- `language-isolation-reviewer`: cross-language ownership, language switching, and global versus
+  language-scoped state.
+
+### Coordination
+
+- The primary agent owns implementation, review integration, and authorized validation. Delegate
+  substantive domain changes or investigations to the relevant reviewer; skip unrelated reviewers
+  and trivial edits. Use independent reviewers in parallel when multiple domains are affected.
+- Use reviewers during design when a change affects important invariants, and on the resulting
+  implementation when review can expose regressions. Do not repeatedly review unchanged code.
+- Add `access-reviewer` when authorization, entitlements, quota accounting, or rate limiting changes.
+  Add `language-isolation-reviewer` when ownership, language selection, persisted associations, or
+  language-sensitive client state changes. These reviewers cover their cross-cutting concerns;
+  the functional reviewer owns the domain behavior.
+- Give each child the goal and acceptance criteria, review mode (design, implementation, or bug
+  investigation), relevant paths, and known constraints. For change reviews, supply the comparison
+  base and relevant diff, including staged, unstaged, and untracked changes in scope. Reviewers cannot
+  obtain Git diffs themselves. Supply any existing validation results with their exact scope.
+- Child sessions start with fresh context. Do not assume they know the parent conversation, user
+  approvals, or previous findings. If essential context is missing, they must report the blocker.
+- Reviewers may read across frontend, backend, tests, and specifications to trace a complete flow.
+  Their domain is a responsibility boundary, not a restriction to one directory.
+- The primary agent must verify findings against the code, reconcile overlapping reports, and
+  distinguish new regressions from pre-existing defects. Retain responsibility for integration and
+  areas outside these domains, including public-site/SEO, infrastructure, and developer tooling.
+- If a configured reviewer is unavailable, report it and use an available general reviewer with the
+  same instructions and read-only constraints. Do not claim the configured agent ran.
+
+### Shared reviewer protocol
+
+- Read this file, the narrowest relevant domain specs, and the affected implementation and tests.
+  Agent files provide review focus; canonical specs own behavioral contracts. Read related specs
+  only when the traced flow needs them. Report disagreements between code, specs, and requested
+  behavior instead of silently choosing one as correct.
+- Trace realistic success, failure, retry, and boundary scenarios. Check callers and shared
+  consumers when a change crosses domain boundaries. Inspect relevant tests for actual assertions,
+  not just filenames. Avoid unrelated refactoring and speculative findings.
+- Report a defect only when supported by a demonstrable code path or a documented execution result.
+  Verify the triggering conditions, reachable callers, relevant guards, and actual consequence;
+  an isolated suspicious line or a hypothetical input is not sufficient evidence.
+- Distinguish static code evidence from observed runtime behavior. Never claim reproduction,
+  passing/failing tests, production impact, or provider behavior without corresponding evidence.
+  Missing tests alone do not establish a defect. Call a defect a regression only when the supplied
+  comparison establishes that the change introduced it.
+- Investigate hypotheses before reporting them. If verification requires unavailable context or
+  execution, report only the specific evidence gap and the check needed to resolve it under
+  limitations, not as a finding. Do not infer missing contracts or fill gaps with assumptions.
+- Do not edit files, execute tests or other validation, contact providers, or delegate work.
+  Recommend the smallest useful existing checks to the primary agent, using
+  `specs/testing.instructions.md`; execution still requires user authorization.
+- Respond in Spanish. Order actionable findings by severity (high, medium, low). For each, include
+  `path:line`, the failing scenario, impact, evidence, and a focused correction recommendation.
+  Include only verified defects in findings; keep missing evidence and pending checks in limitations.
+- Finish with the scope inspected, relevant test coverage read, checks recommended but not run,
+  blockers, and any cross-domain handoff. Explicitly state when no actionable findings were found;
+  a read-only review does not establish runtime correctness or passing tests.
+
+## Pull requests and issues
+
+- Always write PR and issue titles and bodies in English, including issue-form answers. Preserve the original language of quoted application text, error messages, and logs when relevant. This does not change the language used to communicate with the user.
+
+- Read and use `.github/PULL_REQUEST_TEMPLATE.md` when drafting or creating a PR, including through a CLI or API.
+- Preserve the template headings. Report only validation actually performed and its results; identify pending checks explicitly. Use `N/A` for notes that do not apply.
+- For bug reports and feature requests, read the matching form in `.github/ISSUE_TEMPLATE/`. When using a CLI or API, use its field labels as Markdown headings and include the required information. Mark unknown details explicitly rather than inventing reproduction steps, versions, or results.
+- When creating an issue or PR, inspect the repository's existing labels and apply at least one appropriate label: `bug` for defects or fixes, `enhancement` for new features or improvements, and `documentation` for documentation work. Use multiple labels only when each describes a substantive part of the scope.
+- Apply labels during creation when supported, otherwise immediately afterward. CLI/API-created issues must receive the appropriate labels explicitly; do not assume issue-form defaults are applied. Preserve existing labels when adding labels. If permissions prevent labeling or no existing label fits, report the limitation and the pending labeling decision.
+
+## Development environment
+
+- Local application development uses OrbStack or Colima with Docker CLI/Compose on macOS, `docker-compose.dev.yml`, and `run-dev.sh` with macOS Keychain credentials. See `DEVELOPMENT.md` for setup and `specs/docker.instructions.md` for container topology. Do not assume the runtime is installed or the stack is running; obtain explicit authorization before starting/rebuilding containers or running application checks.
+- Automated local validation uses backend tests/static checks and frontend lint/typecheck/unit tests without requiring containers or a running application. This complements the interactive Compose workflow. Deployment checks belong to the maintainer.
+- Host-side validation runtimes, dependencies and caches must stay inside the repository. Use `./scripts/bootstrap.sh` to install the exact toolchain from `scripts/toolchain.env`, and `./scripts/local.sh {root|backend|frontend} command` for host-side Python/Node commands. Do not use global Python/Node/npm, Homebrew installations, or bare `npx` for project work.
+- `.local/`, `.venv/` and `frontend/node_modules/` are generated and Git-ignored. Bootstrap reconstructs them; `--recreate` replaces an existing `.venv`. Python development tools and their indirect dependencies are pinned in `backend/requirements-dev.txt` and `backend/constraints-dev.txt`. Dependency installation belongs to bootstrap, not validation scripts.
+- Use the `run-tests` skill for requested targeted validation and the `pre-push` skill for final full validation.
+- Ask before running tests, builds, linters, typechecks, formatters, or other validation. Do not launch full suites automatically.
+- If a test fails, stop, report the failure, and ask before changing code or tests.
+- Backend CI and images use Python 3.14.9 and pip 26.2.2. Keep `requirements.txt`, `constraints.txt`, Docker, CI, and cache inputs aligned.
+- Frontend CI and Dockerfiles use Node 26.13.0 LTS and explicitly install npm 11.20.0, matching the local toolchain. Generate `package-lock.json` with that npm version and keep `@types/node` on major 26.
+- `develop` and `main` publish Linux `amd64` and `arm64` images from the same backend/frontend Dockerfile paths.
+
+## Code conventions
+
+- Prefer the smallest maintainable change and preserve existing architecture and naming.
+- Python uses Ruff rules `E, W, F, I, UP, B, S, ANN`; `ANN101` is ignored, tests exclude `S` and `ANN`, and Black line length is 100.
+- TypeScript uses no semicolons, single quotes, two-space indentation, ES5 trailing commas, ESLint, and Prettier with the Tailwind plugin.
+- The canonical formatter is `./scripts/format.sh` from repository root.
+- Do not add or update dependencies without explicit approval.
+- Every database schema change must include a versioned Alembic revision in `backend/alembic/versions/`, following the existing revision chain. Prepare the revision file in the repository alongside the model changes; do not leave it for the deployment maintainer to create.
+- Deployment automatically applies the committed revisions with `alembic upgrade head`. Do not apply migrations to a database, run downgrades, or modify a deployed schema without explicit authorization. Local tests that create tables from model metadata do not validate the migration path.

@@ -1,0 +1,201 @@
+from typing import Literal
+
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    DATABASE_URL: str
+    REDIS_URL: str = "redis://localhost:6379/0"
+    SECRET_KEY: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    ALLOW_REGISTRATION: bool = True
+    FIRST_USER_IS_ADMIN: bool = True
+    BLOCKED_EMAIL_DOMAINS: list[str] = []
+    LLM_PROVIDER: str = "ollama"
+    OLLAMA_BASE_URL: str = "http://host.docker.internal:11434"
+    OLLAMA_MODEL: str = "gemma4:e4b"
+    EXERCISE_GENERATION_TIMEOUT_SECONDS: int = Field(default=600, ge=1)
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-6-luna"
+    OPENAI_REASONING_EFFORT: Literal[
+        "", "none", "minimal", "low", "medium", "high", "xhigh", "max"
+    ] = ""
+    ANTHROPIC_API_KEY: str = ""
+    ANTHROPIC_MODEL: str = "claude-3-5-haiku-latest"
+    ANTHROPIC_MAX_TOKENS: int = 8192
+    DEEPSEEK_API_KEY: str = ""
+    DEEPSEEK_MODEL: str = "deepseek-chat"
+    TTS_PROVIDER: Literal["local", "openai", "gemini"] = "local"
+    TTS_BASE_URL: str = "http://kokoro:8880"
+    TTS_VOICE: str = "af_heart"
+    OPENAI_TTS_MODEL: str = "tts-1"
+    OPENAI_TTS_VOICE: str = "nova"
+    OPENAI_TTS_SPEED: float = 1.0
+    GEMINI_API_KEY: str = ""
+    GEMINI_TTS_MODEL: str = "gemini-3.8-flash-tts"
+    GEMINI_TTS_VOICE: Literal["female", "male"] = "female"
+    GEMINI_TTS_FEMALE_VOICE: str = "Kore"
+    GEMINI_TTS_MALE_VOICE: str = "Puck"
+    GEMINI_TTS_TIMEOUT_SECONDS: float = Field(default=50.0, gt=0, allow_inf_nan=False)
+    STT_PROVIDER: str = "local"  # local | openai
+    STT_BASE_URL: str = "http://whisper:9000"
+    OPENAI_STT_MODEL: str = "whisper-1"
+    RATE_LIMIT_ENABLED: bool = True
+    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    COOKIE_SECURE: bool = False
+    LOG_LEVEL: str = "INFO"
+
+    # Default AI usage quotas for new/subscribed users. A quota value of 0 means unlimited.
+    DEFAULT_CONVERSATION_MAX_DURATION: int = 1800
+    DEFAULT_CONVERSATION_INACTIVITY_TIMEOUT: int = 180
+    DEFAULT_CONVERSATION_WEEKLY_SESSIONS: int = 0
+    DEFAULT_CONVERSATION_DAILY_MINUTES: int = 30
+    DEFAULT_CONVERSATION_WEEKLY_MINUTES: int = 90
+    DEFAULT_MONTHLY_TOKENS_LIMIT: int = 1_000_000
+    ASSESSMENT_VOICE_TRIAL_DURATION_SECONDS: int = 300
+
+    # Freemium quotas for unsubscribed users when STRIPE_ENABLED=true.
+    # A quota value of 0 means the feature is entirely blocked for free users.
+    FREEMIUM_CHAT_DAILY_MESSAGES: int = 5
+    FREEMIUM_LESSONS_DAILY: int = 3
+    FREEMIUM_LISTENING_WEEKLY: int = 3
+    FREEMIUM_READING_WEEKLY: int = 3
+    FREEMIUM_GAMES_DAILY: int = 3
+    FREEMIUM_VOICE_WEEKLY_MINUTES: int = 5
+    FREEMIUM_TRIAL_ENABLED: bool = True
+    FREEMIUM_TRIAL_DAYS: int = 7
+
+    # Stripe (for paid plans and billing management)
+    STRIPE_ENABLED: bool = False
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_PRICE_MONTHLY: str = ""
+    STRIPE_PRICE_YEARLY: str = ""
+    STRIPE_TRIAL_DAYS: int = 7
+    STRIPE_BASE_URL: str = "http://localhost:3000"
+
+    # Optional authority for Premium entitlements; Stripe still owns web checkout.
+    REVENUECAT_ENABLED: bool = False
+    REVENUECAT_API_KEY: str = ""
+    REVENUECAT_WEBHOOK_AUTHORIZATION: str = ""
+    REVENUECAT_ENTITLEMENT_ID: str = "premium"
+    REVENUECAT_ENVIRONMENT: Literal["PRODUCTION", "SANDBOX"] = "PRODUCTION"
+    REVENUECAT_STRIPE_PUBLIC_API_KEY: str = ""
+
+    def validate_revenuecat(self) -> None:
+        if not (self.STRIPE_ENABLED and self.REVENUECAT_ENABLED):
+            return
+        required = (
+            "REVENUECAT_API_KEY",
+            "REVENUECAT_WEBHOOK_AUTHORIZATION",
+            "REVENUECAT_ENTITLEMENT_ID",
+        )
+        missing = [name for name in required if not getattr(self, name).strip()]
+        if missing:
+            raise ValueError(f"RevenueCat requires: {', '.join(missing)}")
+
+    # Display prices (shown on landing page and paywall banner)
+    PRICE_MONTHLY: float = 0.0
+    PRICE_YEARLY: float = 0.0
+    TOTAL_PRICE_MONTHLY: float = 0.0
+    TOTAL_PRICE_YEARLY: float = 0.0
+
+    # Shared Umami configuration; both values are required to send backend events.
+    NEXT_PUBLIC_UMAMI_SCRIPT_URL: str = ""
+    NEXT_PUBLIC_UMAMI_WEBSITE_ID: str = ""
+
+    # Email / SMTP
+    EMAIL_ENABLED: bool = False
+    CONTACT_EMAIL: str = ""
+    SMTP_HOST: str = "localhost"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = "noreply@freelingo.app"
+    SMTP_TLS: bool = True
+    SMTP_SSL: bool = False
+    APP_BASE_URL: str = "http://localhost:3000"
+
+    # Listening — path where generated MP3 files are stored (Docker volume)
+    AUDIO_STORAGE_PATH: str = "/data/audio"
+
+    # Multi-language — operator-configured subset of supported target languages.
+    AVAILABLE_TARGET_LANGUAGES: list[str] = [
+        "cs-CZ",
+        "da-DK",
+        "de-DE",
+        "en-GB",
+        "en-US",
+        "es-ES",
+        "fi-FI",
+        "fr-FR",
+        "hr-HR",
+        "it-IT",
+        "ja-JP",
+        "ko-KR",
+        "nl-NL",
+        "pl-PL",
+        "pt-BR",
+        "pt-PT",
+        "ro-RO",
+        "ru-RU",
+        "sv-SE",
+        "zh-CN",
+    ]
+
+    @field_validator(
+        "DEFAULT_CONVERSATION_WEEKLY_SESSIONS",
+        "DEFAULT_CONVERSATION_DAILY_MINUTES",
+        "DEFAULT_CONVERSATION_WEEKLY_MINUTES",
+        "DEFAULT_MONTHLY_TOKENS_LIMIT",
+    )
+    @classmethod
+    def validate_unlimited_quota(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError("Quota defaults must be greater than or equal to 0")
+        return value
+
+    @field_validator("DEFAULT_CONVERSATION_MAX_DURATION")
+    @classmethod
+    def validate_default_max_duration(cls, value: int) -> int:
+        if value not in (900, 1800):
+            raise ValueError("DEFAULT_CONVERSATION_MAX_DURATION must be 900 or 1800")
+        return value
+
+    @field_validator("DEFAULT_CONVERSATION_INACTIVITY_TIMEOUT")
+    @classmethod
+    def validate_default_inactivity_timeout(cls, value: int) -> int:
+        if value not in (60, 180, 300):
+            raise ValueError("DEFAULT_CONVERSATION_INACTIVITY_TIMEOUT must be 60, 180, or 300")
+        return value
+
+    @field_validator(
+        "FREEMIUM_CHAT_DAILY_MESSAGES",
+        "FREEMIUM_LESSONS_DAILY",
+        "FREEMIUM_LISTENING_WEEKLY",
+        "FREEMIUM_READING_WEEKLY",
+        "FREEMIUM_GAMES_DAILY",
+        "FREEMIUM_VOICE_WEEKLY_MINUTES",
+        "FREEMIUM_TRIAL_DAYS",
+    )
+    @classmethod
+    def validate_freemium_quotas(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError("Freemium quota values must be >= 0")
+        return value
+
+    @field_validator("ASSESSMENT_VOICE_TRIAL_DURATION_SECONDS")
+    @classmethod
+    def validate_trial_duration(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("ASSESSMENT_VOICE_TRIAL_DURATION_SECONDS must be greater than 0")
+        if value > 1800:
+            raise ValueError("ASSESSMENT_VOICE_TRIAL_DURATION_SECONDS must not exceed 1800")
+        return value
+
+    model_config = {"env_file": ".env"}
+
+
+settings = Settings()

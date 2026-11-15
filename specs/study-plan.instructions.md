@@ -1,0 +1,382 @@
+---
+description: "Current study-plan grid, language ownership, lazy lesson generation, day progression, skip/pending behavior, lesson lifecycle, progress, and frontend integration."
+applyTo: "backend/app/{data/curriculum.py,models/{study_plan,lesson}.py,schemas/{study_plan,assessment,lessons}.py,routers/{study_plan,lessons,assessment}.py,services/{study_plan_generator,lesson_generator,progress_service}.py}, frontend/src/app/(app)/{dashboard,plan,lesson}/**, frontend/src/components/{plan,assessment}/**"
+---
+
+# Study Plan and Lessons
+
+## Core model
+
+Each target-language track can have one active `StudyPlan`. The owning `UserLanguage` and persisted
+`StudyPlan.target_language` determine isolation; switching the active client language does not reassign
+existing resources.
+
+Assessment completion normally creates the plan. `POST /api/study-plan/generate` remains available as
+an explicit plan-generation endpoint.
+
+Explicit generation uses the supplied `target_language`; omission or null selects the user's active
+language, or the profile language when no active track exists. The resolved code must be canonical and
+operator-enabled, following `target-language.instructions.md`. Invalid or disabled values, including
+an explicit empty string, return `422` before curriculum lookup, language creation or plan replacement.
+
+The plan stores a deterministic week/day grid in `generated_plan`; lesson content is generated lazily
+and persisted when the current day is requested.
+
+## Plan fields and constraints
+
+Important persisted fields are:
+
+- `user_id` and required `user_language_id` ownership.
+- `cefr_level` and denormalized `target_language`.
+- goals, `duration_weeks`, and `days_per_week`.
+- `progress_day`, the zero-based count of completed/passed plan days.
+- `generated_plan`, the complete scheduled grid.
+- `is_active` and completion-test result fields.
+- `current_unit`, initialized to the first curriculum unit.
+
+The partial unique index on `user_language_id` where `is_active=true` enforces one active plan per
+language track.
+
+`StudyPlanResponse` exposes the persisted `target_language` alongside the plan's `id`, including in
+current-plan and generation responses. Callers use these fields to bind resource operations to the
+returned plan and verify its language against the loaded content.
+
+The UI offers duration presets 4, 8, 12, and 16 weeks and derives 5, 5, 4, and 3 days per week. Request
+schemas require `duration_weeks` and `days_per_week` to be at least 1 and `cefr_level` to be one of
+`A1`–`C2`; they do not enforce the preset sets themselves. The service's `assert_plan_capacity()`
+separately rejects an empty resolved curriculum or a grid too short to give every curriculum unit a
+lesson. Both creation endpoints run this check before creating a language row or changing plans.
+
+`current_unit` is not advanced by current production flows and normally remains the first unit for the
+life of a plan. It is not a progress cursor. My Plan derives the current teaching unit from
+`progress_day` and the persisted schedule instead.
+
+## Deterministic generation
+
+`study_plan_generator.py` loads the selected language/level curriculum and allocates one lesson slot
+per plan day, reserving the final grid coordinate for the end-of-level test. The remaining
+`duration_weeks × days_per_week − 1` teaching slots are split into fair per-unit quotas: every unit
+receives `floor(teaching_slots / unit_count)` slots and the remainder goes one slot each to the
+earliest units, so no two units differ by more than one slot. Each unit's quota is filled with a
+cyclic rotation of that unit's own `lesson_types`, so its lessons keep the declared relative order.
+
+Rotations are chosen deterministically to represent as many distinct declared lesson types as possible
+across the whole plan: a modality is absent only when no rotation assignment can represent it. The
+search is exact over the types the selected curriculum declares, ties prefer types declared by fewer
+units and then the canonical lesson-type order, and the earliest units keep their declared cycle start
+whenever coverage allows, so rotations land as late as possible. When the requested capacity cannot
+represent every declared type, the plan keeps the maximum possible coverage and is not described as
+complete modality coverage. The completion-test slot resolves to no curriculum unit and never counts
+towards teaching-modality coverage; it is not a substitute for a unit's own review lesson. Existing
+persisted plans keep their stored schedules; the policy applies to new plan creation only.
+
+A plan whose grid cannot give every unit at least one teaching slot, or whose level resolves to no
+curriculum units, is rejected before any state change, as is a request naming an unknown CEFR level
+(see `api-endpoints.instructions.md`). Capacity-error guidance distinguishes teaching lessons from the
+reserved completion test and rounds the minimum duration up to whole weeks at the requested frequency.
+That duration guarantees at least one lesson per unit, not a complete cycle in every unit; modality
+coverage is a plan-wide property. Generation does not call an LLM.
+
+Each slot contains week/day, type, localized title/objectives, estimated duration, unit ID, grammar
+slugs, and vocabulary-set IDs. The generated grid is the source of scheduled future slots.
+
+## `progress_day`
+
+`progress_day=N` means N plan days have been completed or passed and the current absolute day index is
+N. With `days_per_week`:
+
+```text
+week = (progress_day // days_per_week) + 1
+day  = (progress_day % days_per_week) + 1
+total_days = duration_weeks * days_per_week
+```
+
+The plan is exhausted when `progress_day >= total_days`. Reaching the final position
+(`progress_day >= total_days - 1`) with no pending lesson from a passed day is what unlocks the
+end-of-level assessment; see the completion section below.
+
+## End-of-plan completion and assessment eligibility
+
+The final `completion-test` slot is the real end-of-level assessment position, not a teachable lesson.
+Both `unit_id="completion-test"` and `unit_id="level-test"` identify the reserved position and
+receive identical treatment.
+Eligibility is derived from the persisted plan by `completion_service.py` and is the same everywhere:
+
+- The learner is eligible after reaching the final position (`progress_day >= total_days - 1`) with no
+  lesson from a passed day still incomplete. Skipped lessons keep the assessment locked until
+  completed; they remain reachable through `/pending-lessons`.
+- Unit competency is informational; it does not gate the assessment. The test's own recommendation
+  handles reinforcement.
+- A persisted result (`completion_test_taken`) keeps the flow eligible, so an existing submission is
+  never refused.
+- Language and ownership come from the plan's persisted `user_language_id`; the active learning
+  language does not reassign the resource.
+
+`GET /api/study-plan/today` reports this state in the `completion` field of every response:
+`in_progress` before the final position or while a passed-day lesson is pending, `ready` at the final
+position without a result and without pending lessons, and `taken` at the final position with a
+result. When taken, the state also carries the persisted `score`, `recommendation`, and `next_level`.
+The dashboard and My Plan use this field as the single source of truth for the end-of-plan action. The
+assessment endpoints enforce eligibility server-side; see `learning-resources.instructions.md` and
+`api-endpoints.instructions.md`.
+
+The reserved slot never runs the ordinary lesson generator. A lesson already persisted for that slot
+remains readable: it is returned while the assessment is pending and is neither rewritten nor deleted.
+Once a result exists, the final slot presents only the result. A result persisted before the final
+position does not fabricate completion: `GET /api/study-plan/today` still
+reports `in_progress`, the stored result remains visible in My Plan, and the plan keeps running until
+the final position is reached. Taking the assessment does not rewrite `progress_day`, and no plan path
+mutates it to fabricate completion.
+
+## Lazy lesson generation
+
+`GET /api/study-plan/today` is the central learning-loop endpoint:
+
+1. Resolve the authenticated user's active-language plan or return 404.
+2. Load existing lessons and index them by plan day.
+3. Advance across consecutive current days that already contain generated lessons and whose lessons
+   are all complete.
+4. Persist `progress_day` if it advanced.
+5. Count generated incomplete lessons from passed days as pending, excluding the reserved final slot
+   once a result exists.
+6. Return no current lessons when the plan is exhausted.
+7. Locate the current scheduled slot and reuse a lesson with the same stable identity when present.
+8. Otherwise generate lesson content through the LLM and persist the lesson and exercises, except for
+   the reserved final slot (`completion-test`, or the legacy `level-test` id), which never generates a
+   substitute lesson.
+9. On uniqueness race, roll back and load the row created by the competing request.
+10. On other generation failure, log and exclude that slot from the response.
+
+The response contains `plan_id`, `cefr_level`, `progress_day`, `total_days`, `pending_count`,
+`completion`, and `lessons`. Every returned lesson contains ID, schedule metadata, objectives, unit ID, and
+`is_completed`.
+
+A generation failure does not return a placeholder lesson with `id: null`. If every current slot fails,
+`lessons` is empty and a later `/today` call can retry generation.
+
+Lazy generation resolves the unit's full grammar and vocabulary references from the current
+language/level curriculum. This context can reflect curriculum edits even for an existing plan;
+its persisted schedule and already-generated lesson content remain unchanged.
+
+Auto-advance never crosses a day with no persisted lessons. An unvisited day must be generated and
+completed or explicitly skipped.
+
+## Skip and pending lessons
+
+`POST /api/study-plan/skip-day` increments `progress_day` by one up to `total_days`. It does not create,
+complete, or delete lessons.
+
+`GET /api/study-plan/pending-lessons` returns generated, incomplete lessons whose absolute schedule day
+is before `progress_day`. Ungenerated slots cannot be pending because no lesson row exists.
+
+`GET /api/study-plan/lessons` returns lightweight metadata for every persisted lesson in the active
+plan. It does not generate content, auto-advance, or mutate completion.
+
+## Lesson persistence
+
+A lesson row is unique by `(study_plan_id, week_number, day_number, title)`. Exercises belong to the
+lesson and persist question, options, correct/user answer, score, feedback, explanation, optional
+free-write corrections, and answer timestamp.
+
+Generated lesson content stores richer structures including target-language explanation, optional
+native explanation, exercise native explanation/hint and question translation, vocabulary support, grammar references, and unit
+metadata.
+
+Existing lesson JSON with only the older core vocabulary/explanation fields remains readable. Runtime
+response mapping must tolerate absent optional native-support and enriched-vocabulary fields.
+
+## Lesson lifecycle
+
+1. `/today` materializes the current slot as lesson and exercise rows.
+2. `GET /api/lessons/{id}` verifies ownership and returns detail.
+3. The frontend submits answers through `/api/lessons/exercises/{id}/answer`.
+4. Optional native explanation/hint, question translation, and invalid-exercise regeneration endpoints update generated JSON
+   and, for regeneration, the existing exercise row.
+5. `POST /api/lessons/{id}/complete` locks the lesson and atomically persists first completion,
+   progress, XP, and competencies.
+6. A later `/today` call advances the completed day.
+
+`POST /api/lessons/{id}/start` exists but only verifies ownership and returns the lesson; the current
+lesson page does not call it and no in-progress state is persisted.
+
+Completion retries preserve the original `completed_at`, base lesson XP, completion counters,
+competencies, and quota, and skip freemium quota checks. Both first completions and retries check
+eligible unit and level milestones, including when the final evaluation predates the last teaching
+lesson. A retry can grant a first milestone reward missing from the ledger on the request's UTC day;
+already-awarded milestones do not create new activity. Completion and eligible rewards share one
+transaction and a single captured activity date. Freemium usage is recorded best-effort after the
+database transaction succeeds, only for the first completion.
+
+## Exercise evaluation
+
+Multiple-choice answers are deterministic. Fill-blank can use normalized/LLM evaluation.
+Free-write and pronunciation use LLM-backed evaluation with unavailable fallbacks defined by the
+Lesson/API contracts. Usable free-write corrections persist for reload and review.
+
+One unanswered technically invalid exercise can be regenerated in place. Regeneration must preserve
+exercise type and synchronize the relational row with `lesson.content.exercises`.
+
+### Listening exercises inside lessons
+
+`listening` is an exercise type as well as a lesson type. A listening exercise has its own
+`listening_text`, a target-language question, distinct answer options, and one correct option.
+The source is nonblank and limited to 5000 characters, matching the TTS input limit. It lives in
+`lesson.content.exercises`, alongside native support; questions, options, and answers retain their
+existing relational columns. Generation accepts only the five implemented exercise types:
+`multiple_choice`, `fill_blank`, `free_write`, `pronunciation`, and `listening`.
+Newly generated listening lessons must contain at least one listening exercise; existing saved
+lessons are not regenerated automatically.
+
+The detail and regeneration responses expose `listening_text` and `listening_ready`. Readiness
+requires usable source text and valid options matching the exercise. Incomplete legacy listening
+exercises can be regenerated while unanswered and their lesson remains incomplete. The replacement
+keeps the exercise ID and type and supplies a complete source/question/options set. Answering an
+incomplete listening exercise returns a conflict without recording a score or progress; a submitted
+answer outside its options is rejected. Valid listening answers use deterministic option scoring.
+
+The lesson player synthesizes the source on demand through the existing TTS gateway, supplying the
+lesson's persisted `study_plan_id`. It offers play/pause, seeking and replay; repeated playback within
+the same player reuses the audio. TTS transport and cleanup rules belong to
+`speech-services.instructions.md`. These exercises remain part of lesson progress and completion,
+not the separate Listening exercise pool or attempt quota.
+
+The interface reveals the transcript after answering and during review, using the lesson's target
+language. This is a presentation rule: lesson detail already returns generated content and answer
+keys. It does not provide the separate Listening module's pre-answer API secrecy. Generated prompts
+must keep listening source text out of the explanation and pre-answer hints, and every task requiring
+audio must use the listening exercise format rather than relying on an unplayable external dialogue.
+Prompt constraints do not establish semantic correctness or guarantee absence of answer leakage.
+On-demand exercise hints and explanations receive the matching listening source as untrusted
+reference data and reject incomplete listening exercises. An in-flight response is discarded if the
+source changes. Hints must not quote or translate the transcript; explanations may refer to evidence
+without reproducing the complete source.
+
+### Optional question translation
+
+At every CEFR level, learners can reveal or hide a translation of the exercise question into their
+profile's native language, independently of UI locale. The target-language question stays visible;
+hints and post-answer explanations remain separate support. Translation is available before answering
+and during review, without changing answers, scores, or progress.
+
+Lesson generation and invalid-exercise replacement include optional `question_translation`. Missing
+translations are generated on demand. Each cached translation lives in the corresponding generated
+exercise JSON, with server-stamped `question_translation_language` and `question_translation_source`.
+Reuse requires an exact match with the current native language and the displayed, compatibility-normalized
+question. Regeneration replaces this support along with the exercise. Missing or mismatched metadata
+is a cache miss, including when the native language changes.
+
+Runtime validation rejects empty translations or altered blank markers; normalization that swaps a
+generated fill-blank question discards its original translation. Prompt rules require faithful task
+instructions, unchanged quoted target-language text and practice phrases, and no completed blanks or
+solutions. Structural validation alone does not establish translation quality or absence of semantic
+answer leakage.
+
+Native-support and regeneration writers run generation within a 20-second budget without an open
+database transaction or lesson-row lock. They acquire the shared writer lock only to reread and
+revalidate the current source and merge their result, so optional support cannot hold up lesson
+completion while waiting for the provider. Native support preserves concurrently saved help and
+learning state, reuses a usable result saved by another request, and rejects obsolete source or profile
+language context. Regeneration rechecks that the lesson remains incomplete and the exercise remains
+unanswered and technically invalid before replacing it.
+
+The question translation endpoint derives the target language from the lesson's persisted plan and
+the destination language from the authenticated profile. Before persisting, it verifies that the
+displayed question and profile native language still match, then merges only the matching exercise's
+translation fields into the current lesson JSON. An expired generation budget or obsolete translation
+returns `503` without persisting the generated translation.
+
+## Progress and competencies
+
+Lesson completion applies daily XP and skill progress to the lesson's owning plan. Unit competencies
+use the mean answered-exercise score, or the established fallback when none is available, and update by
+EMA. Detailed XP and mastery rules live in `learning-resources.instructions.md`.
+
+Completion also checks the persisted schedule for a unit bonus: 30 XP once per plan/unit only when
+every scheduled lesson in that unit is complete. Completing the teaching schedule and submitting the
+level test grants 100 XP once per plan, independent of score. Reward keys and credits commit in the
+same transaction as completion; missing future lesson rows cannot qualify as completed slots.
+
+## Frontend integration
+
+Dashboard loads progress and `/today` in parallel. It prioritizes the end-of-plan `completion` state:
+`taken` shows the persisted result with the next-level or My Plan action, `ready` directs to the real
+level test, and otherwise it chooses the first returned incomplete lesson as the next action. It
+exposes generated pending lessons and offers skip when current lessons exist.
+
+Current Dashboard code treats any non-success `/today` response as `hasPlan=false`, not only 404. This
+can show Assessment after a server error and must not be interpreted as a backend absence guarantee.
+
+My Plan combines scheduled slots from `generated_plan` with persisted `/lessons`, `/today`, and
+`/pending-lessons` metadata. Current generated lessons can start, passed incomplete lessons can resume,
+completed lessons open read-only review, and ungenerated future slots have no action. Its level-test
+node and banner are gated by the backend `completion` state, not by unit competency: `ready` opens the
+real assessment and `taken` shows the persisted result.
+
+The current unit is the unit of the scheduled slot at `progress_day`. A matching-plan `/today` response
+can advance that position; a response for another plan or an older position is discarded, including its
+lesson actions and completion state. The final assessment slot and an exhausted plan have no active
+teaching unit. The card's Start action belongs to a persisted incomplete lesson at that exact position
+in the same unit. Completed units do not retain the current-unit label.
+
+Unit completion and card percentages count completed slots against every slot scheduled for that unit,
+including slots not yet generated. Competency scores do not complete units, affect these percentages,
+or unlock cards. A reached unit, a unit with generated lessons, a completed unit, and a unit whose
+prerequisite is completed remain accessible. The first curriculum unit and units without a prerequisite
+are also accessible. Skipping advances position and access, not completion; this remains true at the
+end of the plan. Unit grouping and position use the persisted grid, not curriculum-list order.
+
+Persisted lesson metadata is required to show completion: a failed `/lessons` read offers the plan-load
+retry rather than showing false zero progress. Existing lesson IDs preserve review, current-day Start,
+and Resume actions when `/today` or pending metadata is unavailable. Parallel metadata reads cannot
+replace a known completed lesson with an incomplete state or a pending action. Retrying clears the
+previous attempt's auxiliary state.
+
+My Plan waits for a resolved language before loading these resources. Missing or invalidated context
+uses the shared language GET with a recoverable retry on failure. A switch unmounts the old content;
+the language and cached plan identity key each content instance. The read-only plan and metadata load
+is cancellable and bounded to 20 seconds. `/today` runs independently because it can generate a lesson:
+it uses the transport/backend limits rather than the read-only deadline and cannot keep the plan's
+loading screen open or turn a valid plan into a general error. A successful response merges today's
+lesson actions and completion state into the loaded plan; an unavailable response leaves them unset.
+Every response-body publication, error, navigation, and loading completion is
+discarded after unmount or context/session replacement. Plan-load failures offer retry; a successful
+null plan remains distinct from a request failure.
+
+The lesson page disables answer/regeneration/completion controls for completed lessons. While completion
+and its follow-up refreshes are pending, the shared full-page loading explains that progress is being
+saved and the next lesson prepared. After first completion it refreshes `/today`, can show day-complete
+state, refreshes freemium status, and may trigger the review prompt when the next returned lesson belongs
+to another unit or the plan is exhausted.
+
+My Plan loads its curriculum separately, distinguishing loading, failure, and a successful empty
+collection. The unit count is unset during loading or failure. HTTP/transport errors show a localized
+error and a curriculum-only retry; retry does not reload or generate lessons. The empty-level message
+appears only after a successful empty response. Responses from a previous curriculum load are ignored
+after a language, plan, level, retry, or unmount change.
+
+## Lesson-linked voice practice
+
+The completion screen and completed-lesson review offer an optional practice button. The shared
+confirmation dialog previews the lesson title and explains the guided voice practice. Confirmation
+navigates to `/conversation?lesson={id}`; dismissal does not start voice or affect lesson completion.
+
+The conversation page reads the owned lesson detail before mounting the existing voice component.
+The detail response includes top-level `target_language`, derived from the lesson's persisted plan.
+Loading is cancellable and bounded to 20 seconds, with a retry action on failure. Missing, incomplete,
+or invalid lesson context never silently starts a generic conversation. Practice uses the lesson
+reference rather than chat/demo session-storage context and does not request `/study-plan/today`.
+
+The WebSocket independently verifies ownership and completion and loads a bounded reference snapshot
+of the lesson, scheduled objectives, and answered exercises. The lesson's plan owns the session
+language, level, and provenance, including when it is no longer the active plan. Voice access and
+quota rules remain authoritative. Practice does not change lesson completion or competencies; it can
+credit the existing voice-participation reward to the lesson's persisted plan.
+See `voice-conversation.instructions.md` for prompt lifecycle and history titles.
+
+## Related specifications
+
+- `multi-language.instructions.md`: active language and plan isolation.
+- `learning-resources.instructions.md`: competencies, assessment, and level test.
+- `database-models.instructions.md`: exact persisted fields and constraints.
+- `api-endpoints.instructions.md`: endpoint contracts and errors.
+- `prompts.instructions.md`: lesson generation/evaluation prompt composition.

@@ -1,0 +1,535 @@
+'use client'
+
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Image from 'next/image'
+import { useLocale, useTranslations } from 'next-intl'
+import { Loader2 } from 'lucide-react'
+import { apiFetch, restoreAccessToken } from '@/lib/api'
+import { createCheckout } from '@/lib/billing'
+import {
+  hasTwoMonthsFree,
+  splitYearlyCta,
+  type BillingInterval,
+} from '@/lib/billing-copy'
+import {
+  checkoutNavigationHref,
+  getSelectedPlan,
+} from '@/lib/checkout-navigation'
+import { mapUser } from '@/lib/mappers'
+import { useTrialStatus } from '@/hooks/useTrialStatus'
+import { useAuthStore, isSubscribed, isFreemiumTrialActive } from '@/store/auth'
+import { useConfigStore } from '@/store/config'
+import { useLanguageStore } from '@/store/language'
+import TargetLanguageSelector from '@/components/TargetLanguageSelector'
+import {
+  DEFAULT_TARGET_LANGUAGE,
+  getLanguageByCode,
+} from '@/lib/target-languages'
+
+const LEARNING_GOALS = [
+  'travel',
+  'work',
+  'academic',
+  'daily',
+  'media',
+  'emigration',
+  'exams',
+  'social',
+] as const
+
+type LearningGoal = (typeof LEARNING_GOALS)[number]
+
+export default function OnboardingPage() {
+  const t = useTranslations('onboarding')
+  const tCommon = useTranslations('common')
+  const tLang = useTranslations('targetLanguages')
+  const locale = useLocale()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const setUser = useAuthStore((s) => s.setUser)
+  const user = useAuthStore((s) => s.user)
+  const stripeEnabled = useConfigStore((s) => s.stripeEnabled)
+  const configLoaded = useConfigStore((s) => s.loaded)
+  const stripeTrialDays = useConfigStore((s) => s.stripeTrialDays)
+  const priceMonthly = useConfigStore((s) => s.priceMonthly)
+  const priceYearly = useConfigStore((s) => s.priceYearly)
+  const loadConfig = useConfigStore((s) => s.load)
+  const fetchLanguages = useLanguageStore((s) => s.fetchLanguages)
+  const availableLanguageCodes = useLanguageStore(
+    (s) => s.availableLanguageCodes
+  )
+
+  const isNewLanguage = searchParams.get('new') === 'true'
+  const queryLanguage = searchParams.get('language')
+  const selectedPlan = getSelectedPlan(searchParams.get('plan'))
+
+  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [targetLanguage, setTargetLanguage] = useState(
+    queryLanguage ?? DEFAULT_TARGET_LANGUAGE
+  )
+  const [selectedGoals, setSelectedGoals] = useState<LearningGoal[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [languagesLoaded, setLanguagesLoaded] = useState(false)
+  const [languagesError, setLanguagesError] = useState(false)
+  const [checkoutLoading, setCheckoutLoading] =
+    useState<BillingInterval | null>(null)
+  const [checkoutError, setCheckoutError] = useState('')
+  const checkoutRequest = useRef<AbortController | null>(null)
+  const profileRequest = useRef<AbortController | null>(null)
+  const languageRequest = useRef<AbortController | null>(null)
+  useEffect(
+    () => () => {
+      checkoutRequest.current?.abort()
+      profileRequest.current?.abort()
+      languageRequest.current?.abort()
+    },
+    []
+  )
+
+  const targetLanguageName = tLang(
+    getLanguageByCode(targetLanguage)?.iso639 ??
+      DEFAULT_TARGET_LANGUAGE.split('-')[0]
+  )
+
+  const loadLanguages = useCallback(async () => {
+    languageRequest.current?.abort()
+    const controller = new AbortController()
+    languageRequest.current = controller
+    const { sessionVersion } = useAuthStore.getState()
+    const obsolete = () =>
+      controller.signal.aborted ||
+      useAuthStore.getState().sessionVersion !== sessionVersion
+    setLanguagesLoaded(false)
+    setLanguagesError(false)
+    try {
+      if (!useAuthStore.getState().accessToken) {
+        await restoreAccessToken(controller.signal)
+      }
+      if (obsolete()) return
+      const loaded = await fetchLanguages(controller.signal)
+      if (obsolete()) return
+      if (!loaded) throw new Error('Language lookup failed')
+      const codes = useLanguageStore.getState().availableLanguageCodes
+      setTargetLanguage((current) =>
+        codes.length > 0 && !codes.includes(current) ? codes[0] : current
+      )
+    } catch {
+      if (!obsolete()) setLanguagesError(true)
+    } finally {
+      if (!obsolete()) setLanguagesLoaded(true)
+    }
+  }, [fetchLanguages])
+
+  useEffect(() => {
+    void loadConfig()
+    void loadLanguages()
+    return () => languageRequest.current?.abort()
+  }, [loadConfig, loadLanguages])
+
+  function toggleGoal(goal: LearningGoal) {
+    setSelectedGoals((prev) =>
+      prev.includes(goal) ? prev.filter((g) => g !== goal) : [...prev, goal]
+    )
+  }
+
+  const languageReady =
+    languagesLoaded &&
+    !languagesError &&
+    availableLanguageCodes.includes(targetLanguage)
+
+  async function handleStep1(e: React.FormEvent) {
+    e.preventDefault()
+    if (!languageReady) return
+    setStep(2)
+  }
+
+  const subscribed = isSubscribed(user, stripeEnabled)
+  const showTrial = stripeEnabled && !subscribed
+  const { freemiumTrialActive } = useTrialStatus()
+  const showCheckout =
+    showTrial && (!freemiumTrialActive || selectedPlan !== null)
+  const totalSteps = step === 3 || showTrial || freemiumTrialActive ? 3 : 2
+
+  async function handleStep2() {
+    profileRequest.current?.abort()
+    const controller = new AbortController()
+    profileRequest.current = controller
+    const { sessionVersion } = useAuthStore.getState()
+    const obsolete = () =>
+      controller.signal.aborted ||
+      useAuthStore.getState().sessionVersion !== sessionVersion
+    setLoading(true)
+    setError('')
+    try {
+      if (!useAuthStore.getState().accessToken) {
+        await restoreAccessToken(controller.signal)
+      }
+      if (obsolete()) return
+      if (!useConfigStore.getState().loaded) await loadConfig()
+      if (obsolete()) return
+      if (!useConfigStore.getState().loaded) {
+        throw new Error('Configuration unavailable')
+      }
+      const body: Record<string, unknown> = {
+        target_language: targetLanguage,
+        learning_goals: selectedGoals,
+      }
+      const res = await apiFetch('/api/auth/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      })
+      if (!res.ok) throw new Error(t('saveFailed'))
+      const updated = await res.json()
+      if (obsolete()) return
+      const mapped = mapUser(updated, user)
+      setUser(mapped)
+      const config = useConfigStore.getState()
+      if (!config.loaded) throw new Error('Configuration unavailable')
+      const trialActive = isFreemiumTrialActive(mapped, config.stripeEnabled)
+      if (trialActive || !isSubscribed(mapped, config.stripeEnabled)) {
+        setStep(3)
+      } else {
+        router.push('/dashboard')
+      }
+    } catch {
+      if (!obsolete()) setError(t('saveFailed'))
+    } finally {
+      if (!obsolete()) setLoading(false)
+    }
+  }
+
+  async function handleCheckout(interval: BillingInterval) {
+    checkoutRequest.current?.abort()
+    const controller = new AbortController()
+    checkoutRequest.current = controller
+    const { sessionVersion } = useAuthStore.getState()
+    const obsolete = () =>
+      controller.signal.aborted ||
+      useAuthStore.getState().sessionVersion !== sessionVersion
+    setCheckoutLoading(interval)
+    setCheckoutError('')
+    try {
+      if (!useAuthStore.getState().accessToken) {
+        try {
+          await restoreAccessToken(controller.signal)
+        } catch {
+          if (!obsolete()) {
+            router.push(checkoutNavigationHref('/login', interval))
+          }
+          return
+        }
+      }
+      if (obsolete()) return
+
+      const url = await createCheckout(interval, controller.signal)
+      if (obsolete()) return
+      if (url) window.location.assign(url)
+      else router.push('/dashboard')
+    } catch {
+      if (obsolete()) return
+      setCheckoutError(t('trialError'))
+    } finally {
+      if (!obsolete()) setCheckoutLoading(null)
+    }
+  }
+
+  const checkoutPlans: BillingInterval[] =
+    selectedPlan === 'monthly' ? ['monthly', 'yearly'] : ['yearly', 'monthly']
+  const trialEligible =
+    configLoaded &&
+    Number.isInteger(stripeTrialDays) &&
+    stripeTrialDays > 0 &&
+    user?.trial_used === false
+  const yearlyCta = splitYearlyCta(
+    t(trialEligible ? 'trialCtaYearly' : 'trialCtaYearlyTrialUsed', {
+      price: new Intl.NumberFormat(locale).format(priceYearly),
+    }),
+    hasTwoMonthsFree(priceMonthly, priceYearly)
+  )
+
+  return (
+    <div className="bg-fl-bg flex min-h-screen items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        <div className="mb-10 flex flex-col items-center">
+          <Image
+            src="/logo.png"
+            alt="FreeLingo"
+            width={80}
+            height={80}
+            className="mb-4"
+          />
+          <h1 className="text-fl-fg font-code text-xl font-bold tracking-widest uppercase">
+            FreeLingo
+          </h1>
+          <p className="text-fl-caption text-fl-muted-2 mt-1 font-mono tracking-widest uppercase">
+            {tCommon('tagline')}
+          </p>
+        </div>
+
+        <div className="border-fl-border bg-fl-surface border p-8">
+          {/* Step indicator */}
+          <div className="border-fl-border mb-6 flex items-center justify-between gap-2 border-b pb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-fl-label text-fl-muted-2">●</span>
+              <span className="text-fl-muted-2 font-mono text-xs tracking-widest uppercase">
+                {step === 1
+                  ? isNewLanguage
+                    ? t('newLanguageHeadline')
+                    : t('title')
+                  : step === 2
+                    ? t('goals.title')
+                    : freemiumTrialActive && !showCheckout
+                      ? t('freemiumTrialTitle')
+                      : t(
+                          trialEligible
+                            ? 'trialHeadline'
+                            : 'trialHeadlineTrialUsed'
+                        )}
+              </span>
+            </div>
+            <span className="text-fl-hint text-fl-muted-4 font-mono tabular-nums">
+              {step}/{totalSteps}
+            </span>
+          </div>
+
+          {error && (
+            <div className="border-fl-error/40 text-fl-error mb-5 border px-4 py-3 font-mono text-xs tracking-wide">
+              ✕ {error}
+            </div>
+          )}
+
+          {/* Step 1: Language */}
+          {step === 1 && (
+            <form onSubmit={handleStep1} className="space-y-6">
+              <p className="text-fl-fg mb-4 font-mono text-sm">
+                {isNewLanguage ? t('newLanguageSubtitle') : t('subtitle')}
+              </p>
+              <div>
+                <label className="text-fl-muted-2 mb-3 block font-mono text-xs tracking-widest uppercase">
+                  {t('chooseVariant')}
+                </label>
+                {!languagesLoaded ? (
+                  <div className="border-fl-border text-fl-muted-2 border px-4 py-3 font-mono text-xs tracking-widest">
+                    ...
+                  </div>
+                ) : !languagesError && availableLanguageCodes.length > 0 ? (
+                  <TargetLanguageSelector
+                    value={targetLanguage}
+                    onChange={setTargetLanguage}
+                    availableCodes={availableLanguageCodes}
+                  />
+                ) : (
+                  <div className="space-y-3 text-center">
+                    <p className="text-fl-muted-2 font-mono text-xs">
+                      {t('saveFailed')}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void loadLanguages()}
+                      className="text-fl-label text-fl-accent font-mono text-xs tracking-widest uppercase underline"
+                    >
+                      {tCommon('retry')}
+                    </button>
+                  </div>
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={!languageReady}
+                className="bg-fl-accent text-fl-accent-fg hover:bg-fl-accent/90 w-full py-3 font-mono text-sm font-bold tracking-widest uppercase transition-colors disabled:opacity-40"
+              >
+                {tCommon('next')}
+              </button>
+            </form>
+          )}
+
+          {/* Step 2: Learning goals */}
+          {step === 2 && (
+            <div className="space-y-5">
+              <p className="text-fl-fg font-mono text-sm">
+                {t('goals.subtitle', { language: targetLanguageName })}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {LEARNING_GOALS.map((goal) => {
+                  const active = selectedGoals.includes(goal)
+                  return (
+                    <button
+                      key={goal}
+                      type="button"
+                      onClick={() => toggleGoal(goal)}
+                      className={`text-fl-label border px-3 py-3 text-left font-mono tracking-widest uppercase transition-colors ${
+                        active
+                          ? 'border-fl-accent bg-fl-accent text-fl-accent-fg'
+                          : 'border-fl-border text-fl-muted-2 hover:border-fl-border-2 hover:text-fl-fg'
+                      }`}
+                    >
+                      {t(`goals.${goal}`)}
+                    </button>
+                  )
+                })}
+              </div>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => handleStep2()}
+                className="bg-fl-accent text-fl-accent-fg hover:bg-fl-accent/90 w-full py-3 font-mono text-sm font-bold tracking-widest uppercase transition-colors disabled:opacity-40"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+                    {tCommon('saving')}
+                  </>
+                ) : error ? (
+                  tCommon('retry')
+                ) : (
+                  t('continue')
+                )}
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => handleStep2()}
+                className="text-fl-label text-fl-muted-4 hover:text-fl-muted-2 w-full py-1 font-mono tracking-widest uppercase transition-colors disabled:opacity-40"
+              >
+                {t('goals.skip')}
+              </button>
+            </div>
+          )}
+
+          {/* Step 3: Trial confirmation */}
+          {step === 3 && freemiumTrialActive && !showCheckout && (
+            <div className="space-y-5 text-center">
+              <h2 className="text-fl-fg font-mono text-base font-bold">
+                {t('freemiumTrialTitle')}
+              </h2>
+              <p className="text-fl-muted-1 font-mono text-xs leading-relaxed">
+                {t('freemiumTrialDesc')}
+              </p>
+              <ul className="text-fl-muted-2 space-y-1.5 text-left font-mono text-xs">
+                <li className="flex items-start gap-2">
+                  <span className="text-fl-accent shrink-0">✓</span>
+                  {t('freemiumChatLabel')}
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-fl-accent shrink-0">✓</span>
+                  {t('freemiumVoiceLabel')}
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-fl-accent shrink-0">✓</span>
+                  {t('freemiumListeningLabel')}
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-fl-accent shrink-0">✓</span>
+                  {t('freemiumReadingLabel')}
+                </li>
+              </ul>
+              <button
+                type="button"
+                onClick={() => router.push('/dashboard')}
+                className="bg-fl-accent text-fl-accent-fg hover:bg-fl-accent/90 w-full py-3 font-mono text-sm font-bold tracking-widest uppercase transition-colors"
+              >
+                {t('goToDashboard')}
+              </button>
+            </div>
+          )}
+
+          {/* Step 3: Stripe subscription */}
+          {step === 3 && showCheckout && (
+            <div className="space-y-5 text-center">
+              <h2 className="text-fl-fg font-mono text-base font-bold">
+                {t(trialEligible ? 'trialTitle' : 'trialTitleTrialUsed', {
+                  days: stripeTrialDays,
+                })}
+              </h2>
+              <p className="text-fl-muted-1 font-mono text-xs leading-relaxed">
+                {t(trialEligible ? 'trialDesc' : 'trialDescTrialUsed', {
+                  days: stripeTrialDays,
+                })}
+              </p>
+              <div className="flex flex-col gap-3">
+                {checkoutPlans.map((plan, index) => {
+                  const isPrimary = index === 0
+                  return (
+                    <button
+                      key={plan}
+                      type="button"
+                      disabled={checkoutLoading !== null}
+                      onClick={() => handleCheckout(plan)}
+                      className={`w-full py-3 font-mono text-sm font-bold tracking-widest uppercase transition-colors disabled:opacity-50 ${
+                        isPrimary
+                          ? 'bg-fl-accent text-fl-accent-fg hover:bg-fl-accent/90'
+                          : 'border-fl-border text-fl-muted-1 hover:text-fl-fg hover:border-fl-border-2 border'
+                      }`}
+                    >
+                      {checkoutLoading === plan ? (
+                        '...'
+                      ) : plan === 'monthly' ? (
+                        t(
+                          trialEligible
+                            ? 'trialCtaMonthly'
+                            : 'trialCtaMonthlyTrialUsed',
+                          {
+                            price: new Intl.NumberFormat(locale).format(
+                              priceMonthly
+                            ),
+                          }
+                        )
+                      ) : (
+                        <span className="flex flex-col items-center gap-0.5 leading-relaxed">
+                          <span>{yearlyCta.main}</span>
+                          {yearlyCta.savings && (
+                            <span
+                              className={`text-xs ${
+                                isPrimary
+                                  ? 'text-fl-accent-fg'
+                                  : 'text-fl-muted-3'
+                              }`}
+                            >
+                              {yearlyCta.savings}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+              {checkoutError && (
+                <p className="text-fl-hint font-mono text-red-500">
+                  {checkoutError}
+                </p>
+              )}
+              <p className="text-fl-hint text-fl-muted-3 font-mono tracking-widest uppercase">
+                {t(trialEligible ? 'trialNoCharge' : 'trialNoChargeTrialUsed', {
+                  days: stripeTrialDays,
+                })}
+              </p>
+              <button
+                type="button"
+                disabled={checkoutLoading !== null}
+                onClick={() => router.push('/dashboard')}
+                className="text-fl-label text-fl-muted-4 hover:text-fl-muted-2 w-full py-1 font-mono tracking-widest uppercase transition-colors disabled:opacity-40"
+              >
+                {t('trialSkip')}
+              </button>
+            </div>
+          )}
+          {step === 3 && !freemiumTrialActive && !showCheckout && (
+            <button
+              type="button"
+              disabled={checkoutLoading !== null}
+              onClick={() => router.push('/dashboard')}
+              className="bg-fl-accent text-fl-accent-fg hover:bg-fl-accent/90 w-full py-3 font-mono text-sm font-bold tracking-widest uppercase transition-colors disabled:opacity-40"
+            >
+              {t('goToDashboard')}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

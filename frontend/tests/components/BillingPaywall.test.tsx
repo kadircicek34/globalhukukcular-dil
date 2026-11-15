@@ -1,0 +1,695 @@
+import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import React from 'react'
+
+const localeState = vi.hoisted(() => ({
+  value: 'en',
+  yearlyLabel: null as string | null,
+}))
+
+vi.mock('next-intl', () => ({
+  useLocale: () => localeState.value,
+  useTranslations: () => (key: string) =>
+    key === 'planYearly' && localeState.yearlyLabel ? localeState.yearlyLabel : key,
+}))
+
+vi.mock('next/link', () => ({
+  default: ({
+    href,
+    children,
+    ...props
+  }: React.AnchorHTMLAttributes<HTMLAnchorElement>) =>
+    React.createElement('a', { href: String(href), ...props }, children),
+}))
+
+vi.mock('@/components/tour/OnboardingTour', () => ({
+  default: () => null,
+}))
+
+vi.mock('@/components/whats-new/WhatsNew', () => ({
+  default: () => null,
+}))
+
+vi.mock('@/components/ui/page-loading', () => ({
+  PageLoading: ({ label }: { label: string }) => <div>{label}</div>,
+}))
+
+const { mockApiFetch, mockLandingSubscriptionState } = vi.hoisted(() => ({
+  mockApiFetch: vi.fn(),
+  mockLandingSubscriptionState: vi.fn(),
+}))
+
+vi.mock('@/lib/api', () => ({
+  apiFetch: mockApiFetch,
+}))
+
+vi.mock('@/lib/landing-subscription', () => ({
+  getLandingSubscriptionState: mockLandingSubscriptionState,
+}))
+
+import PricingSection from '@/components/billing/PricingSection'
+import { PaywallBanner } from '@/components/billing/PaywallBanner'
+import { SubscriptionPlanButtons } from '@/components/billing/SubscriptionPlanButtons'
+import { BillingSection } from '@/components/settings/BillingSection'
+import DashboardPage from '@/app/(app)/dashboard/page'
+import { useAuthStore, type User } from '@/store/auth'
+import { useConfigStore } from '@/store/config'
+import { useLanguageStore } from '@/store/language'
+import { useProgressStore } from '@/store/progress'
+import { getLanguageByCode } from '@/lib/target-languages'
+
+function jsonResponse(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+function user(overrides: Partial<User> = {}): User {
+  return {
+    id: 1,
+    username: 'learner',
+    displayName: 'Learner',
+    email: 'learner@example.com',
+    native_language: 'es',
+    ui_locale: 'en',
+    role: 'user' as const,
+    conversation_max_duration: 30,
+    conversation_inactivity_timeout: 10,
+    avatar: null,
+    is_verified: true,
+    bio: null,
+    learning_goals: [],
+    subscription_status: 'none',
+    subscription_ends_at: null,
+    trial_used: false,
+    ...overrides,
+  }
+}
+
+function resetStores() {
+  useAuthStore.setState({ accessToken: 'token', user: user() })
+  useConfigStore.setState({
+    stripeEnabled: true,
+    stripeTrialDays: 7,
+    freemiumTrialEnabled: true,
+    ttsProvider: 'local',
+    openaiTtsVoice: 'nova',
+    maintenanceMode: false,
+    priceMonthly: 9.99,
+    priceYearly: 99.99,
+    totalPriceMonthly: 119.88,
+    totalPriceYearly: 99.99,
+    loaded: true,
+  })
+  useLanguageStore.setState({
+    activeLanguage: getLanguageByCode('en-GB') ?? null,
+    userLanguages: [],
+    supportedLanguages: [],
+    availableLanguageCodes: [],
+    isSwitching: false,
+  })
+  useProgressStore.setState({
+    streak: 0,
+    xp: 0,
+    skills: {},
+    todayLessons: [],
+    completedToday: [],
+    currentUnitId: '',
+    currentPlanDurationWeeks: 12,
+    unitProgress: {},
+    levelTestUnlocked: false,
+    levelTestResult: null,
+  })
+}
+
+beforeEach(() => {
+  localeState.value = 'en'
+  localeState.yearlyLabel = null
+  mockApiFetch.mockReset()
+  mockLandingSubscriptionState.mockReset()
+  resetStores()
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { assign: vi.fn() },
+  })
+})
+
+describe('billing paywall UI', () => {
+  it.each(['paywall', 'plans'])(
+    'hides the fixed savings claim for unmatched prices in %s',
+    (component) => {
+      localeState.yearlyLabel = 'Annual · €110/year · 2 months free →'
+      useConfigStore.setState({ priceMonthly: 10, priceYearly: 110 })
+      render(component === 'paywall' ? <PaywallBanner /> : <SubscriptionPlanButtons />)
+      expect(screen.queryByText('2 months free')).not.toBeInTheDocument()
+      expect(screen.getByText('Annual · €110/year →')).toBeInTheDocument()
+      act(() => {
+        useConfigStore.setState({ priceYearly: 100 })
+      })
+      expect(screen.getByText('2 months free')).toBeInTheDocument()
+    }
+  )
+
+  it('keeps dashboard purchase actions available during the no-card trial', async () => {
+    useAuthStore.setState({
+      user: user({ freemium_trial_ends_at: '2099-01-01T00:00:00Z' }),
+    })
+    mockApiFetch
+      .mockResolvedValueOnce(jsonResponse({}))
+      .mockResolvedValueOnce(jsonResponse({ lessons: [] }))
+      .mockResolvedValueOnce(
+        jsonResponse({ url: 'https://checkout.stripe.com/pay/trial' })
+      )
+
+    render(<DashboardPage />)
+
+    expect(await screen.findByText('freemiumTrialTitle')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'planMonthly' }))
+    await waitFor(() =>
+      expect(window.location.assign).toHaveBeenCalledWith(
+        'https://checkout.stripe.com/pay/trial'
+      )
+    )
+    act(() => useConfigStore.setState({ freemiumTrialEnabled: false }))
+    expect(screen.queryByText('freemiumTrialTitle')).not.toBeInTheDocument()
+    expect(screen.getByText('premiumBannerTitle')).toBeInTheDocument()
+  })
+
+  it.each([0, -1, NaN, Infinity, 1.5])(
+    'does not promise a card trial for invalid duration %s',
+    (stripeTrialDays) => {
+      useConfigStore.setState({ stripeTrialDays })
+      render(<SubscriptionPlanButtons />)
+      expect(screen.queryByText('paywallNoCharge')).not.toBeInTheDocument()
+      expect(screen.getByText('paywallNoChargeTrialUsed')).toBeInTheDocument()
+    }
+  )
+
+  it.each([
+    { loaded: true, trialUsed: false, eligible: true },
+    { loaded: true, trialUsed: true, eligible: false },
+    { loaded: false, trialUsed: false, eligible: false },
+    { loaded: true, trialUsed: undefined, eligible: false },
+  ])('shows card-trial terms only with confirmed eligibility: %j', ({
+    loaded,
+    trialUsed,
+    eligible,
+  }) => {
+    useConfigStore.setState({ loaded })
+    useAuthStore.setState({ user: user({ trial_used: trialUsed }) })
+    render(<SubscriptionPlanButtons />)
+    expect(
+      screen.getByText(eligible ? 'paywallNoCharge' : 'paywallNoChargeTrialUsed')
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(eligible ? 'paywallNoChargeTrialUsed' : 'paywallNoCharge')
+    ).not.toBeInTheDocument()
+  })
+
+  it.each([true, false])(
+    'preserves the landing plan in entry links with registration=%s',
+    (allowRegistration) => {
+      render(
+        <PricingSection
+          allowRegistration={allowRegistration}
+          stripeEnabled
+          trialDays={0}
+          hasSession={false}
+          priceMonthly={10}
+          priceYearly={100}
+          totalPriceMonthly={10}
+          totalPriceYearly={100}
+        />
+      )
+      const destination = allowRegistration ? '/register' : '/login'
+      expect(
+        screen.getAllByRole('link').map((link) => link.getAttribute('href'))
+      ).toEqual([
+        destination,
+        `${destination}?plan=monthly`,
+        `${destination}?plan=yearly`,
+        `${destination}?plan=yearly`,
+      ])
+      expect(mockApiFetch).not.toHaveBeenCalled()
+    }
+  )
+
+  it.each([-1, 0, 8, 9.99, NaN, Infinity])(
+    'omits invalid or non-discounted reference price %s',
+    (totalPriceMonthly) => {
+      render(
+        <PricingSection
+          allowRegistration
+          stripeEnabled
+          trialDays={0}
+          hasSession={false}
+          priceMonthly={9.99}
+          priceYearly={99.99}
+          totalPriceMonthly={totalPriceMonthly}
+          totalPriceYearly={99.99}
+        />
+      )
+      expect(screen.queryByText('priceOriginal')).not.toBeInTheDocument()
+    }
+  )
+
+  it('shows a valid reference price only above the current price', () => {
+    render(
+      <PricingSection
+        allowRegistration
+        stripeEnabled
+        trialDays={0}
+        hasSession={false}
+        priceMonthly={9.99}
+        priceYearly={99.99}
+        totalPriceMonthly={15}
+        totalPriceYearly={99.99}
+      />
+    )
+    expect(screen.getAllByText('priceOriginal')).toHaveLength(1)
+  })
+
+  it('keeps plans available without promising a trial after an unknown eligibility lookup', async () => {
+    mockLandingSubscriptionState.mockResolvedValueOnce({
+      subscribed: false,
+      trialUsed: null,
+    })
+    render(
+      <PricingSection
+        allowRegistration
+        stripeEnabled
+        trialDays={7}
+        hasSession
+        priceMonthly={10}
+        priceYearly={100}
+        totalPriceMonthly={10}
+        totalPriceYearly={100}
+      />
+    )
+    expect(await screen.findAllByRole('button', {
+      name: 'ctaRegisterTrialUsed',
+    })).toHaveLength(3)
+    expect(screen.queryByText('pricingDesc')).not.toBeInTheDocument()
+    expect(screen.queryByText('paywallNoCharge')).not.toBeInTheDocument()
+    expect(screen.getByText('pricingDescTrialUsed')).toBeInTheDocument()
+  })
+
+  it.each([
+    { monthly: 10, yearly: 100, claim: true },
+    { monthly: 10, yearly: 110, claim: false },
+    { monthly: 0, yearly: 0, claim: false },
+  ])('only compares two free months for matching prices: %j', ({
+    monthly,
+    yearly,
+    claim,
+  }) => {
+    render(
+      <PricingSection
+        allowRegistration
+        stripeEnabled
+        trialDays={0}
+        hasSession={false}
+        priceMonthly={monthly}
+        priceYearly={yearly}
+        totalPriceMonthly={monthly}
+        totalPriceYearly={yearly}
+      />
+    )
+    expect(!!screen.queryByText('planFeature.feature2')).toBe(claim)
+  })
+
+  it.each(['paywall', 'settings'])(
+    'refreshes the profile and removes purchase actions after an already-active conflict in %s',
+    async (component) => {
+      mockApiFetch
+        .mockResolvedValueOnce(
+          jsonResponse({ detail: 'subscription_already_active' }, 409)
+        )
+        .mockResolvedValueOnce(
+          jsonResponse({
+            ...user(),
+            display_name: 'Learner',
+            subscription_status: 'active',
+          })
+        )
+      render(component === 'paywall' ? <PaywallBanner /> : <BillingSection />)
+      fireEvent.click(screen.getByText('planMonthly'))
+      await waitFor(() =>
+        expect(useAuthStore.getState().user?.subscription_status).toBe('active')
+      )
+      expect(screen.queryByText('planMonthly')).toBeNull()
+      expect(screen.queryByText('checkoutError')).toBeNull()
+      expect(window.location.assign).not.toHaveBeenCalled()
+      if (component === 'settings') {
+        expect(screen.getByText('manage')).toBeInTheDocument()
+      }
+    }
+  )
+
+  it.each(['paywall', 'settings'])(
+    'keeps purchase recovery available after a failed profile read in %s',
+    async (component) => {
+      mockApiFetch
+        .mockResolvedValueOnce(
+          jsonResponse({ detail: 'subscription_already_active' }, 409)
+        )
+        .mockResolvedValueOnce(jsonResponse({}, 503))
+      render(component === 'paywall' ? <PaywallBanner /> : <BillingSection />)
+      fireEvent.click(screen.getByText('planMonthly'))
+      await waitFor(() =>
+        expect(screen.getByText('checkoutError')).toBeInTheDocument()
+      )
+      expect(useAuthStore.getState().user?.subscription_status).toBe('none')
+      expect(screen.getByText('planMonthly').closest('button')).not.toBeDisabled()
+      expect(window.location.assign).not.toHaveBeenCalled()
+    }
+  )
+
+  it('formats the subscription end date with the selected interface locale', () => {
+    localeState.value = 'fi'
+    useAuthStore.setState({
+      user: user({
+        subscription_status: 'canceled',
+        subscription_ends_at: '2099-09-24T12:00:00Z',
+      }),
+    })
+
+    render(<BillingSection />)
+
+    expect(screen.getByText('24.9.2099')).toBeInTheDocument()
+  })
+
+  it('opens Customer Portal for past_due users in Settings instead of showing plan buttons', async () => {
+    useAuthStore.setState({
+      accessToken: 'token',
+      user: user({ subscription_status: 'past_due' }),
+    })
+    mockApiFetch.mockResolvedValueOnce(
+      jsonResponse({ url: 'https://billing.stripe.com/session/test' })
+    )
+
+    render(<BillingSection />)
+
+    expect(screen.getByText('pastDueTitle')).toBeDefined()
+    expect(screen.getByText('pastDueDesc')).toBeDefined()
+    expect(screen.queryByText('planMonthly')).toBeNull()
+
+    fireEvent.click(screen.getByText('updatePayment'))
+
+    await waitFor(() =>
+      expect(mockApiFetch).toHaveBeenCalledWith('/api/billing/portal', {
+        method: 'POST',
+        signal: expect.any(AbortSignal),
+      })
+    )
+    expect(window.location.assign).toHaveBeenCalledWith(
+      'https://billing.stripe.com/session/test'
+    )
+  })
+
+  it('opens Customer Portal for unpaid users in Settings instead of showing plan buttons', async () => {
+    useAuthStore.setState({
+      accessToken: 'token',
+      user: user({ subscription_status: 'unpaid' }),
+    })
+    mockApiFetch.mockResolvedValueOnce(
+      jsonResponse({ url: 'https://billing.stripe.com/session/unpaid' })
+    )
+
+    render(<BillingSection />)
+
+    expect(screen.getByText('statusUnpaid')).toBeDefined()
+    expect(screen.getByText('pastDueTitle')).toBeDefined()
+    expect(screen.queryByText('planMonthly')).toBeNull()
+
+    fireEvent.click(screen.getByText('updatePayment'))
+
+    await waitFor(() =>
+      expect(mockApiFetch).toHaveBeenCalledWith('/api/billing/portal', {
+        method: 'POST',
+        signal: expect.any(AbortSignal),
+      })
+    )
+    expect(window.location.assign).toHaveBeenCalledWith(
+      'https://billing.stripe.com/session/unpaid'
+    )
+  })
+
+  it('opens Customer Portal for paused users in Settings instead of showing plan buttons', async () => {
+    useAuthStore.setState({
+      accessToken: 'token',
+      user: user({ subscription_status: 'paused' }),
+    })
+    mockApiFetch.mockResolvedValueOnce(
+      jsonResponse({ url: 'https://billing.stripe.com/session/paused' })
+    )
+
+    render(<BillingSection />)
+
+    expect(screen.getByText('statusPaused')).toBeDefined()
+    expect(screen.getByText('pastDueTitle')).toBeDefined()
+    expect(screen.queryByText('planMonthly')).toBeNull()
+
+    fireEvent.click(screen.getByText('updatePayment'))
+
+    await waitFor(() =>
+      expect(mockApiFetch).toHaveBeenCalledWith('/api/billing/portal', {
+        method: 'POST',
+        signal: expect.any(AbortSignal),
+      })
+    )
+    expect(window.location.assign).toHaveBeenCalledWith(
+      'https://billing.stripe.com/session/paused'
+    )
+  })
+
+  it('shows subscription plan buttons for canceled users in Settings', () => {
+    useAuthStore.setState({
+      accessToken: 'token',
+      user: user({ subscription_status: 'canceled' }),
+    })
+
+    render(<BillingSection />)
+
+    expect(screen.getByText('statusCanceled')).toBeDefined()
+    expect(screen.getByText('planMonthly')).toBeDefined()
+    expect(screen.getByText('planYearly')).toBeDefined()
+    expect(screen.queryByText('updatePayment')).toBeNull()
+  })
+
+  it.each(['incomplete', 'incomplete_expired'] as const)(
+    'shows subscription plan buttons for %s users in Settings',
+    (subscriptionStatus) => {
+      useAuthStore.setState({
+        accessToken: 'token',
+        user: user({ subscription_status: subscriptionStatus }),
+      })
+
+      render(<BillingSection />)
+
+      expect(
+        screen.getByText(
+          subscriptionStatus === 'incomplete'
+            ? 'statusIncomplete'
+            : 'statusIncompleteExpired'
+        )
+      ).toBeDefined()
+      expect(screen.getByText('planMonthly')).toBeDefined()
+      expect(screen.getByText('planYearly')).toBeDefined()
+      expect(screen.queryByText('updatePayment')).toBeNull()
+    }
+  )
+
+  it('shows subscription plan buttons for users without a subscription in Settings', () => {
+    render(<BillingSection />)
+
+    expect(screen.getByText('planMonthly')).toBeDefined()
+    expect(screen.getByText('planYearly')).toBeDefined()
+    expect(screen.queryByText('pastDueTitle')).toBeNull()
+  })
+
+  it('uses payment-recovery copy and portal action for past_due users on dashboard', async () => {
+    useAuthStore.setState({
+      accessToken: 'token',
+      user: user({ subscription_status: 'past_due' }),
+    })
+    mockApiFetch
+      .mockResolvedValueOnce(
+        jsonResponse({
+          current_streak: 0,
+          total_xp: 0,
+          skills: {},
+          total_lessons: 0,
+          total_exercises: 0,
+          exercises_correct: 0,
+          accuracy: 0,
+          vocabulary_level: null,
+          vocabulary_mastered: 0,
+          vocabulary_total: 0,
+          vocabulary_progress: 0,
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          cefr_level: 'A1',
+          progress_day: 0,
+          total_days: 7,
+          pending_count: 0,
+          lessons: [],
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ url: 'https://billing.stripe.com/session/dashboard' })
+      )
+
+    render(<DashboardPage />)
+
+    await waitFor(() =>
+      expect(screen.getByText('premiumBannerPastDueTitle')).toBeDefined()
+    )
+    expect(screen.getByText('premiumBannerPastDueDesc')).toBeDefined()
+    expect(screen.queryByText('planMonthly')).toBeNull()
+
+    fireEvent.click(screen.getByText('updatePayment'))
+
+    await waitFor(() =>
+      expect(mockApiFetch).toHaveBeenLastCalledWith('/api/billing/portal', {
+        method: 'POST',
+        signal: expect.any(AbortSignal),
+      })
+    )
+    expect(window.location.assign).toHaveBeenCalledWith(
+      'https://billing.stripe.com/session/dashboard'
+    )
+  })
+
+  it('uses payment-recovery copy and portal action for paused users on dashboard', async () => {
+    useAuthStore.setState({
+      accessToken: 'token',
+      user: user({ subscription_status: 'paused' }),
+    })
+    mockApiFetch
+      .mockResolvedValueOnce(
+        jsonResponse({
+          current_streak: 0,
+          total_xp: 0,
+          skills: {},
+          total_lessons: 0,
+          total_exercises: 0,
+          exercises_correct: 0,
+          accuracy: 0,
+          vocabulary_level: null,
+          vocabulary_mastered: 0,
+          vocabulary_total: 0,
+          vocabulary_progress: 0,
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          cefr_level: 'A1',
+          progress_day: 0,
+          total_days: 7,
+          pending_count: 0,
+          lessons: [],
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ url: 'https://billing.stripe.com/session/paused' })
+      )
+
+    render(<DashboardPage />)
+
+    await waitFor(() =>
+      expect(screen.getByText('premiumBannerPastDueTitle')).toBeDefined()
+    )
+    expect(screen.queryByText('planMonthly')).toBeNull()
+
+    fireEvent.click(screen.getByText('updatePayment'))
+
+    await waitFor(() =>
+      expect(mockApiFetch).toHaveBeenLastCalledWith('/api/billing/portal', {
+        method: 'POST',
+        signal: expect.any(AbortSignal),
+      })
+    )
+    expect(window.location.assign).toHaveBeenCalledWith(
+      'https://billing.stripe.com/session/paused'
+    )
+  })
+
+  it('uses Customer Portal instead of checkout buttons for recovery states in PaywallBanner', async () => {
+    useAuthStore.setState({
+      accessToken: 'token',
+      user: user({ subscription_status: 'unpaid' }),
+    })
+    mockApiFetch.mockResolvedValueOnce(
+      jsonResponse({ url: 'https://billing.stripe.com/session/paywall' })
+    )
+
+    render(<PaywallBanner />)
+
+    expect(screen.getByText('pastDueTitle')).toBeDefined()
+    expect(screen.getByText('pastDueDesc')).toBeDefined()
+    expect(screen.getByText('updatePayment')).toBeDefined()
+    expect(screen.queryByText('planMonthly')).toBeNull()
+    expect(screen.queryByText('paywallNoCharge')).toBeNull()
+    expect(screen.queryByText('paywallNoChargeTrialUsed')).toBeNull()
+
+    fireEvent.click(screen.getByText('updatePayment'))
+
+    await waitFor(() =>
+      expect(mockApiFetch).toHaveBeenCalledWith('/api/billing/portal', {
+        method: 'POST',
+        signal: expect.any(AbortSignal),
+      })
+    )
+    expect(window.location.assign).toHaveBeenCalledWith(
+      'https://billing.stripe.com/session/paywall'
+    )
+  })
+
+  it.each([true, false])(
+    'starts Checkout directly with a session and registration=%s',
+    async (allowRegistration) => {
+      mockLandingSubscriptionState.mockResolvedValueOnce({
+        subscribed: false,
+        trialUsed: false,
+      })
+      mockApiFetch.mockResolvedValueOnce(
+        jsonResponse({ url: 'https://checkout.stripe.com/pay/monthly' })
+      )
+
+      render(
+        <PricingSection
+          allowRegistration={allowRegistration}
+          stripeEnabled={true}
+          trialDays={7}
+          hasSession={true}
+          priceMonthly={9.99}
+          priceYearly={99.99}
+          totalPriceMonthly={119.88}
+          totalPriceYearly={99.99}
+        />
+      )
+
+      await waitFor(() =>
+        expect(screen.getAllByText('ctaRegister')).toHaveLength(3)
+      )
+      fireEvent.click(screen.getAllByText('ctaRegister')[0])
+
+      await waitFor(() =>
+        expect(mockApiFetch).toHaveBeenCalledWith('/api/billing/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan: 'monthly' }),
+          signal: expect.any(AbortSignal),
+        })
+      )
+      expect(mockApiFetch.mock.calls[0][1].signal.aborted).toBe(false)
+      expect(window.location.assign).toHaveBeenCalledWith(
+        'https://checkout.stripe.com/pay/monthly'
+      )
+    }
+  )
+})
