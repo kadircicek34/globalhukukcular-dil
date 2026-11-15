@@ -1,8 +1,10 @@
 import secrets
 import uuid
+from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import FileResponse
 from redis.asyncio import Redis
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +24,7 @@ from app.models.study_plan import StudyPlan
 from app.models.user import User
 from app.models.user_language import UserLanguage
 from app.schemas.admin import (
+    AdminMembershipResponse,
     AdminOverviewStatsResponse,
     AdminUserCreate,
     AdminUserResponse,
@@ -30,9 +33,12 @@ from app.schemas.admin import (
     InviteResponse,
     LanguageStats,
     MaintenanceModeUpdate,
+    MembershipDecisionResponse,
+    MembershipRejectRequest,
     PaginatedAdminUsersResponse,
+    PaginatedMembershipsResponse,
 )
-from app.services import email_service, revenuecat_service
+from app.services import email_service, membership_service, revenuecat_service
 from app.services.subscription_service import apply_subscription_quotas
 from app.utils.pagination import paginate
 
@@ -82,6 +88,12 @@ async def get_admin_stats(
     reviews_pending = (
         await db.scalar(select(func.count(Review.id)).where(Review.is_approved.is_(False))) or 0
     )
+    memberships_pending = (
+        await db.scalar(
+            select(func.count(User.id)).where(User.membership_status == "pending")
+        )
+        or 0
+    )
 
     return AdminOverviewStatsResponse(
         users_total=users_total,
@@ -94,6 +106,7 @@ async def get_admin_stats(
         feedback_pending=feedback_pending,
         feedback_bug_pending=feedback_bug_pending,
         reviews_pending=reviews_pending,
+        memberships_pending=memberships_pending,
     )
 
 
@@ -165,6 +178,7 @@ async def create_user(
         role=data.role,
         is_active=True,
         is_verified=not settings.EMAIL_ENABLED,
+        membership_status="approved",
     )
     db.add(user)
     await db.commit()
@@ -189,6 +203,111 @@ async def create_user(
         )
 
     return user
+
+
+@router.get("/memberships", response_model=PaginatedMembershipsResponse)
+@limiter.limit("60/minute")
+async def list_memberships(
+    request: Request,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+    status_filter: Literal["pending", "approved", "rejected"] | None = Query(
+        default=None, alias="status"
+    ),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    q: str = Query(default="", max_length=100),
+):
+    base = select(User)
+    if status_filter:
+        base = base.where(User.membership_status == status_filter)
+    if q.strip():
+        pattern = f"%{q.strip()}%"
+        base = base.where(
+            User.username.ilike(pattern)
+            | User.email.ilike(pattern)
+            | User.display_name.ilike(pattern)
+            | User.law_school.ilike(pattern)
+        )
+    users, total = await paginate(
+        db,
+        base.order_by(
+            User.application_submitted_at.desc().nulls_last(), User.id.desc()
+        ),
+        (page - 1) * page_size,
+        page_size,
+    )
+    return PaginatedMembershipsResponse(
+        items=[AdminMembershipResponse.model_validate(user) for user in users],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get("/memberships/{user_id}/document", response_model=None)
+@limiter.limit("60/minute")
+async def get_membership_document(
+    request: Request,
+    user_id: int,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
+    path = membership_service.resolve_document_path(user.e_devlet_document_path)
+    if path is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    suffix = path.suffix if path.suffix in {".pdf", ".jpg", ".jpeg", ".png"} else ".bin"
+    return FileResponse(
+        path,
+        media_type=user.e_devlet_document_mime or "application/octet-stream",
+        headers={
+            "Cache-Control": "private, no-store",
+            "Content-Disposition": f'inline; filename="edevlet-{user.id}{suffix}"',
+        },
+    )
+
+
+@router.post("/memberships/{user_id}/approve", response_model=MembershipDecisionResponse)
+@limiter.limit("60/minute")
+async def approve_membership(
+    request: Request,
+    user_id: int,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
+    user.membership_status = "approved"
+    user.membership_note = None
+    user.membership_reviewed_at = datetime.now(UTC).replace(tzinfo=None)
+    user.membership_reviewed_by = admin.id
+    user.is_verified = True
+    await db.commit()
+    return MembershipDecisionResponse(status="approved", id=user.id)
+
+
+@router.post("/memberships/{user_id}/reject", response_model=MembershipDecisionResponse)
+@limiter.limit("60/minute")
+async def reject_membership(
+    request: Request,
+    user_id: int,
+    data: MembershipRejectRequest,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
+    user.membership_status = "rejected"
+    user.membership_note = data.reason.strip()
+    user.membership_reviewed_at = datetime.now(UTC).replace(tzinfo=None)
+    user.membership_reviewed_by = admin.id
+    await db.commit()
+    return MembershipDecisionResponse(status="rejected", id=user.id)
 
 
 @router.get("/users/{user_id}/stats", response_model=AdminUserStatsResponse)

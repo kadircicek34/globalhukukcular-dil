@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_serializer, field_validator
@@ -123,6 +123,46 @@ class AdminUserResponse(BaseModel):
         return v.isoformat() if v else None
 
 
+class AdminMembershipResponse(BaseModel):
+    id: int
+    username: str
+    email: str | None
+    display_name: str
+    birth_date: date | None = None
+    law_status: str | None = None
+    law_school: str | None = None
+    graduation_year: int | None = None
+    phone: str | None = None
+    membership_status: str
+    membership_note: str | None = None
+    document_name: str | None = None
+    document_mime: str | None = None
+    application_submitted_at: datetime | None = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+    @field_serializer("application_submitted_at", "created_at")
+    def serialize_membership_datetime(self, v: datetime | None, _info):  # noqa: ANN001
+        return v.isoformat() if v else None
+
+
+class PaginatedMembershipsResponse(BaseModel):
+    items: list[AdminMembershipResponse]
+    total: int
+    page: int
+    page_size: int
+
+
+class MembershipRejectRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class MembershipDecisionResponse(BaseModel):
+    status: str
+    id: int
+
+
 class InviteResponse(BaseModel):
     invite_url: str
 
@@ -147,6 +187,7 @@ class AdminOverviewStatsResponse(BaseModel):
     feedback_pending: int = 0
     feedback_bug_pending: int = 0
     reviews_pending: int = 0
+    memberships_pending: int = 0
 
 
 class LanguageStats(BaseModel):

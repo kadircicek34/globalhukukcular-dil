@@ -1,14 +1,16 @@
 import base64
 import json
 import os
+import re
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import jwt
 from fastapi import (
     APIRouter,
     Depends,
     File,
+    Form,
     Header,
     HTTPException,
     Request,
@@ -35,16 +37,19 @@ from app.core.security import (
 )
 from app.models.user import User
 from app.schemas.auth import (
+    SUPPORTED_LANGUAGES,
     ForgotPasswordRequest,
     LoginRequest,
+    MembershipApplicationResponse,
     RegisterRequest,
     RegisterResponse,
     ResetPasswordRequest,
     TokenResponse,
     UserResponse,
     UserUpdateRequest,
+    validate_password_strength,
 )
-from app.services import email_service, revenuecat_service
+from app.services import email_service, membership_service, revenuecat_service
 from app.services.account_deletion_service import require_canceled_billing
 
 logger = get_logger(__name__)
@@ -61,7 +66,20 @@ async def register(
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
-    if not settings.ALLOW_REGISTRATION:
+    if settings.MEMBERSHIP_REQUIRED:
+        if not data.invite_token:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Membership application required",
+            )
+        valid = await redis.get(f"invite:{data.invite_token}")
+        if not valid:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid or expired invite",
+            )
+        await redis.delete(f"invite:{data.invite_token}")
+    elif not settings.ALLOW_REGISTRATION:
         if data.invite_token:
             valid = await redis.get(f"invite:{data.invite_token}")
             if not valid:
@@ -74,8 +92,6 @@ async def register(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Registration is closed"
             )
-    else:
-        pass
 
     if settings.BLOCKED_EMAIL_DOMAINS:
         email_domain = data.email.split("@")[-1].lower()
@@ -106,6 +122,7 @@ async def register(
         role=role,
         is_active=True,
         is_verified=not settings.EMAIL_ENABLED,
+        membership_status="approved",
     )
     db.add(user)
     await db.commit()
@@ -158,6 +175,154 @@ async def register(
     )
 
 
+def _minimum_birth_date() -> date:
+    today = date.today()
+    try:
+        return today.replace(year=today.year - 15)
+    except ValueError:
+        return today.replace(year=today.year - 15, day=28)
+
+
+def _membership_denied_detail(user: User) -> str | None:
+    if user.membership_status == "pending":
+        return "Membership pending approval"
+    if user.membership_status == "rejected":
+        return "Membership application rejected"
+    if user.membership_status != "approved":
+        return "Membership approval required"
+    return None
+
+
+@router.post(
+    "/apply",
+    response_model=MembershipApplicationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@limiter.limit("5/minute")
+async def apply_for_membership(
+    request: Request,
+    username: str = Form(..., min_length=3, max_length=50),
+    email: str = Form(...),
+    password: str = Form(..., min_length=10, max_length=25),
+    display_name: str = Form(..., min_length=2, max_length=100),
+    birth_date: date = Form(...),
+    law_status: str = Form(...),
+    law_school: str = Form(..., min_length=2, max_length=200),
+    kvkk_accepted: bool = Form(...),
+    terms_accepted: bool = Form(...),
+    e_devlet_document: UploadFile = File(...),
+    phone: str | None = Form(default=None, max_length=30),
+    graduation_year: int | None = Form(default=None),
+    native_language: str = Form(default="tr"),
+    db: AsyncSession = Depends(get_db),
+):
+    if not re.fullmatch(r"[\w.-]+", username):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Kullanıcı adı yalnızca harf, rakam, nokta, alt çizgi ve tire içerebilir",
+        )
+    username = username.strip().lower()
+    if not username:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Kullanıcı adı zorunlu"
+        )
+    try:
+        validate_password_strength(password)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
+        ) from None
+    normalized_email = email.strip().lower()
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", normalized_email):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Geçerli bir e-posta girin"
+        )
+    if native_language not in SUPPORTED_LANGUAGES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Desteklenmeyen arayüz dili",
+        )
+    if law_status not in {"student", "graduate"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Hukuk durumu öğrenci veya mezun olmalıdır",
+        )
+    if not kvkk_accepted or not terms_accepted:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="KVKK aydınlatma metni ve üyelik koşulları onaylanmalıdır",
+        )
+    if birth_date >= date.today() or birth_date > _minimum_birth_date():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Üyelik için en az 15 yaşında olmanız gerekir",
+        )
+    current_year = date.today().year
+    if graduation_year is not None and not (1950 <= graduation_year <= current_year):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Mezuniyet yılı geçersiz",
+        )
+    if law_status == "student":
+        graduation_year = None
+
+    existing = await db.execute(select(User).where(User.username == username))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already taken")
+    email_check = await db.execute(
+        select(User).where(func.lower(User.email) == normalized_email)
+    )
+    if email_check.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already taken")
+
+    stored_path, document_name, document_mime = await membership_service.save_e_devlet_document(
+        e_devlet_document
+    )
+    try:
+        user_count = await db.scalar(select(func.count(User.id)))
+        is_first_user = user_count == 0
+        role = "admin" if (is_first_user and settings.FIRST_USER_IS_ADMIN) else "user"
+        now = datetime.now(UTC).replace(tzinfo=None)
+        user = User(
+            username=username,
+            email=normalized_email,
+            display_name=display_name.strip() or username,
+            hashed_password=hash_password(password),
+            native_language=native_language,
+            target_language="en-GB",
+            role=role,
+            is_active=True,
+            is_verified=not settings.EMAIL_ENABLED,
+            membership_status="approved" if is_first_user else "pending",
+            birth_date=birth_date,
+            law_status=law_status,
+            law_school=law_school.strip(),
+            graduation_year=graduation_year,
+            phone=(phone or "").strip() or None,
+            e_devlet_document_path=stored_path,
+            e_devlet_document_name=document_name,
+            e_devlet_document_mime=document_mime,
+            kvkk_accepted_at=now,
+            application_submitted_at=now,
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+    except Exception:
+        membership_service.delete_document(stored_path)
+        raise
+
+    return MembershipApplicationResponse(
+        status=user.membership_status,
+        application_id=user.id,
+        message=(
+            "Başvurunuz alındı. Yönetici onayından sonra giriş yapabilirsiniz."
+            if user.membership_status == "pending"
+            else "Yönetici hesabınız hazır. Giriş yapabilirsiniz."
+        ),
+    )
+
+
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("10/minute")
 async def login(
@@ -179,6 +344,10 @@ async def login(
 
     if not password_ok or not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    denied = _membership_denied_detail(user)
+    if denied:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=denied)
 
     user.last_login = datetime.now(UTC).replace(tzinfo=None)
     await db.commit()
@@ -245,6 +414,16 @@ async def refresh(
     if expected_user_id is not None and str(expected_user_id) != str(user_id):
         raise HTTPException(status_code=409, detail="auth_context_changed")
 
+    user = await db.get(User, int(user_id))
+    if not user:
+        await redis.delete(f"refresh:{token}")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    denied = _membership_denied_detail(user)
+    if denied:
+        await redis.delete(f"refresh:{token}")
+        response.delete_cookie("refresh_token")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=denied)
+
     await redis.delete(f"refresh:{token}")
 
     new_refresh = create_refresh_token()
@@ -259,10 +438,6 @@ async def refresh(
         samesite="lax",
         max_age=ttl,
     )
-
-    user = await db.get(User, int(user_id))
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
     return {
         "access_token": create_access_token(user.id, user.role),

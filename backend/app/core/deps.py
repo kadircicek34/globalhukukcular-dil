@@ -37,6 +37,13 @@ async def get_current_user(
     user = await db.get(User, user_id)
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or inactive")
+    if user.membership_status != "approved":
+        detail = (
+            "Membership pending approval"
+            if user.membership_status == "pending"
+            else "Membership application rejected"
+        )
+        raise HTTPException(status_code=403, detail=detail)
     return user
 
 
