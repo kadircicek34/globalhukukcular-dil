@@ -36,13 +36,15 @@ export function AdminPanel({
   title,
   meta,
   children,
+  className = '',
 }: {
   title?: string
   meta?: ReactNode
   children: ReactNode
+  className?: string
 }) {
   return (
-    <div className="border-fl-border bg-fl-surface border">
+    <div className={`border-fl-border bg-fl-surface border ${className}`}>
       {(title || meta) && (
         <div className="border-fl-border flex flex-wrap items-center gap-2 border-b px-5 py-4">
           {title && (
