@@ -66,9 +66,6 @@ Ekran görüntüleri: `/root/dil/screenshots/`
 - Chat UI canlı test: mesaj gönderildi, yanıt ~6 sn'de geldi (yerel yedek)
 - Dashboard: 8 sn zaman aşımı sonrası yükleme ekranı kapanıyor, içerik geliyor
 - Çerez bandı chat giriş/send alanını kapatmıyor
-- Eğitim: plan 1 için 48 ders oluşturuldu; `/api/study-plan/today` 102 ms
-- Mobil 390px ve masaüstünde dashboard "BAŞLA" -> `/lesson/1` açıldı
-- Ders sorusu yanıtlandı; "Doğru!" ve %100 geri bildirimi geldi
 - Canlı TTS: `/api/tts/tour/tr/step4` -> 200 `audio/wav` (Antalya Mini)
 - Edge TTS fallback: İngilizce metin -> 200 `audio/mpeg` (Antalya Türkçe-only
   olduğu için otomatik Edge'e düştü)
@@ -76,6 +73,12 @@ Ekran görüntüleri: `/root/dil/screenshots/`
 - Dashboard: yavaş `/today` isteği 12 sn sonra bırakılıyor; tur ve panel açılıyor
 - Not: panelde kullanıcı başvuruları korunmuştur (id 9 onaylı; id 11 ve 12
   bekleyen). Otomatik test kullanıcıları silinmiştir.
+
+## Demo içerik notu
+
+- Elle oluşturulan 48 ders ve seed script'i kullanıcı isteğiyle silindi.
+- Plan/rota korunuyor; dersler yeniden LLM üretimiyle oluşturulacak.
+- OpenCode Go kotası dolu olduğu sürece üretim yerel yedeğe düşer veya bekler.
 
 ## Bilinen sınırlamalar
 

@@ -1,6 +1,6 @@
 # GH Dil — Canlı Durum
 
-Son güncelleme: 16 Kasım 2026, 13:10
+Son güncelleme: 16 Kasım 2026, 13:35
 
 ## Tamamlanan
 
@@ -16,10 +16,13 @@ Son güncelleme: 16 Kasım 2026, 13:10
   `0600/0700` dosya izinleri, beyaz liste e-posta alan adları
 - Production: Docker Compose, Postgres 16, Redis 7, Caddy reverse proxy
 - Admin bootstrap: `kadircicek13@icloud.com` / kullanıcı `kadir` (şifre `/root/dil/admin-credentials.txt`)
-- LLM: OpenCode Go birincil (`opencode.ai` OpenAI-uyumlu uç, oturum başlığıyla);
-  kota dolduğunda otomatik yerel Ollama `qwen2.5:1.5b` yedeğine düşüyor.
-  Arayüzde sağlayıcı/model adı gösterilmiyor; asistan yalnızca Lingu.
-- Chat canlı test: yerel yedekle ~6 sn yanıt; OpenCode Go kotası ~2 gün sonra yenilenecek.
+- LLM: OpenCode Go birincil (mevcut oturumun kimliğiyle, `opencode.ai`
+  OpenAI-uyumlu uç ve oturum başlığı); kota dolduğunda yerel Ollama
+  `qwen2.5:1.5b` yedeği devrede. Arayüzde sağlayıcı/model adı gösterilmiyor.
+- OpenCode Go kotası şu an dolu (yaklaşık 2 gün); aynı sağlayıcı kotası açılınca
+  otomatik olarak birincil model kullanılacak. Alternatif: OpenCode Go Extra Usage.
+- Kullanıcı isteğiyle elle oluşturduğum 48 demo ders ve seed script'i kaldırıldı;
+  plan/rota korunuyor. Ders içerikleri yeniden yalnızca LLM üretimiyle oluşturulacak.
 - Testler: backend 90 passed + Ruff temiz; frontend tsc/eslint temiz; landing Vitest 23/23;
   canlı Playwright 20/20
 - DNS: `dil.globalhukukcular.com A 169.58.198.19` yayında
@@ -33,9 +36,7 @@ Son güncelleme: 16 Kasım 2026, 13:10
   eklendi; yavaş yerel LLM ders üretimi dashboard'u süresiz kilitlemiyor.
   Tur uygulama kabuğuna taşındı; çerez bandı içerik alanını kapatmıyor.
 - 22 uygulama sayfası canlıda 200; 5xx/konsol hatası yok.
-- Plan 1 için 48 A1 dersi ve alıştırmaları oluşturuldu. Dashboard `/today`
-  ~100 ms'de dönüyor; mobil/masaüstünde "BAŞLA" ile `/lesson/1` açıldı,
-  cevap gönderildi ve "Doğru!" geri bildirimi alındı.
+
 - Landing footer'daki açık kaynak/AGPL satırı kaldırıldı; LICENSE/NOTICE korunuyor.
 - Caddy aktif health-check kaldırıldı; frontend recreate sonrası 503 giderildi
 

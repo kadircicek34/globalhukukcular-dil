@@ -61,18 +61,6 @@ container'a bağlanır. Farklı bir sunucuda modeli container içinden indirin:
 docker exec ghdil-ollama ollama pull qwen2.5:3b
 ```
 
-## Demo ders içeriği
-
-LLM kotası yokken veya yerel model çok yavaşken mevcut planın tüm günleri için
-deterministik A1 dersleri oluşturmak:
-
-```bash
-docker exec -e PYTHONPATH=/app ghdil-backend \
-  python scripts/seed_plan_lessons.py --plan-id 1
-```
-
-Bu komut planın `weekly_plan` günlerinden ders ve alıştırma kayıtları üretir;
-`/api/study-plan/today` artık AI çağrısı yapmadan döner.
 
 ## Admin bootstrap
 
