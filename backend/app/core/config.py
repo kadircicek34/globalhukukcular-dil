@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     ANTHROPIC_MAX_TOKENS: int = 8192
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_MODEL: str = "deepseek-chat"
+    DEEPSEEK_BASE_URL: str = "https://api.deepseek.com/v1"
+    DEEPSEEK_SESSION_ID: str = ""
+    # Optional resilient fallback for the primary chat provider.
+    LLM_FALLBACK_PROVIDER: str = ""
     TTS_PROVIDER: Literal["local", "openai", "gemini", "antalia", "edge"] = "local"
     TTS_BASE_URL: str = "http://kokoro:8880"
     TTS_VOICE: str = "af_heart"

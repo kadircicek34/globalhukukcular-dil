@@ -61,6 +61,11 @@ Ekran görüntüleri: `/root/dil/screenshots/`
 - Landing Vitest: 23/23
 - Canlı LLM adapter testi (Ollama `qwen2.5:3b`): `provider=ollama`, yanıt `OK`
 - Canlı admin paneli: 0 console hatası, 0 sunucu 5xx
+- 22 uygulama sayfası canlıda 200 (dashboard, plan, ilerleme, kartlar, sohbet,
+  dinleme, okuma, konuşma, oyunlar, seviye tespiti, kaynaklar, ayarlar, admin)
+- Chat UI canlı test: mesaj gönderildi, yanıt ~6 sn'de geldi (yerel yedek)
+- Dashboard: 8 sn zaman aşımı sonrası yükleme ekranı kapanıyor, içerik geliyor
+- Çerez bandı chat giriş/send alanını kapatmıyor
 - Canlı TTS: `/api/tts/tour/tr/step4` -> 200 `audio/wav` (Antalya Mini)
 - Edge TTS fallback: İngilizce metin -> 200 `audio/mpeg` (Antalya Türkçe-only
   olduğu için otomatik Edge'e düştü)

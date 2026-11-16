@@ -34,7 +34,7 @@ Yüklenen e-Devlet belgeleri public dizinde tutulmaz. Belge indirme ucu yalnızc
 - `frontend/` — Next.js 16 App Router, Tailwind CSS, next-intl, Zustand
 - `backend/` — FastAPI, SQLAlchemy async, Alembic, Pydantic v2
 - PostgreSQL 16 + Redis 7
-- LLM: Ollama (yerel), OpenAI, Anthropic veya DeepSeek
+- LLM: OpenCode Go (birincil), Ollama (yerel yedek), OpenAI, Anthropic
 - Ses: Antalya Mini (yerel Türkçe TTS) → Edge TTS → tarayıcı sesi; STT için faster-whisper/OpenAI
 - Üretim: Docker Compose + Caddy reverse proxy
 

@@ -618,8 +618,9 @@ class LLMToolStream(LLMStream):
 
 
 class LLMAdapter:
-    def __init__(self):
-        self.provider = settings.LLM_PROVIDER
+    def __init__(self, provider_override: str | None = None):
+        self.provider = provider_override or settings.LLM_PROVIDER
+        self._fallback: LLMAdapter | None = None
         self._native_tools_available_logged = False
         if self.provider == "ollama":
             self.client = AsyncOpenAI(
@@ -631,9 +632,15 @@ class LLMAdapter:
             self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
             self.model = settings.OPENAI_MODEL
         elif self.provider == "deepseek":
+            headers = (
+                {"x-opencode-session": settings.DEEPSEEK_SESSION_ID}
+                if settings.DEEPSEEK_SESSION_ID
+                else None
+            )
             self.client = AsyncOpenAI(
-                base_url="https://api.deepseek.com/v1",
+                base_url=settings.DEEPSEEK_BASE_URL,
                 api_key=settings.DEEPSEEK_API_KEY,
+                default_headers=headers,
             )
             self.model = settings.DEEPSEEK_MODEL
         elif self.provider == "anthropic":
@@ -645,6 +652,13 @@ class LLMAdapter:
             )
             self.client = None
             self.model = settings.ANTHROPIC_MODEL
+
+        if (
+            provider_override is None
+            and self.provider == "deepseek"
+            and settings.LLM_FALLBACK_PROVIDER == "ollama"
+        ):
+            self._fallback = LLMAdapter(provider_override="ollama")
 
     async def _call_with_retry(
         self, fn, *args, tools_requested: bool = False, max_retries: int = MAX_RETRIES, **kwargs
@@ -666,6 +680,11 @@ class LLMAdapter:
                 if tools_requested and _is_tools_unsupported_error(e):
                     raise LLMToolsUnsupportedError(f"{self.provider} does not support tools") from e
                 error_msg = str(e)
+                if "usage limit" in error_msg.lower() or "429" in error_msg:
+                    last_error = LLMUnavailableError(
+                        f"{self.provider} quota or rate limit reached"
+                    )
+                    break
                 if "connection" in error_msg.lower():
                     last_error = LLMUnavailableError(
                         f"{self.provider} is unreachable. Check that the service is running."
@@ -683,6 +702,71 @@ class LLMAdapter:
         raise last_error
 
     async def chat(
+        self,
+        messages: list[dict],
+        stream: bool = False,
+        *,
+        tools: list[LLMTool] | None = None,
+        tool_executor: ToolExecutor | None = None,
+        fallback_messages: list[dict] | None = None,
+    ) -> str | LLMStream:
+        try:
+            return await self._chat_primary(
+                messages,
+                stream,
+                tools=tools,
+                tool_executor=tool_executor,
+                fallback_messages=fallback_messages,
+            )
+        except LLMError as exc:
+            if self._fallback is None:
+                raise
+            logger.warning(
+                "Primary LLM provider failed; switching to fallback provider: %s",
+                type(exc).__name__,
+            )
+            fallback_input = (
+                self._compact_fallback_messages(messages) if stream else messages
+            )
+            fallback_system = (
+                self._compact_fallback_messages(fallback_messages)
+                if stream and fallback_messages is not None
+                else fallback_messages
+            )
+            return await self._fallback.chat(
+                fallback_input,
+                stream,
+                tools=None if stream else tools,
+                tool_executor=None if stream else tool_executor,
+                fallback_messages=None if stream else fallback_system,
+            )
+
+    @staticmethod
+    def _compact_fallback_messages(messages: list[dict]) -> list[dict]:
+        """Keep the fallback chat prompt small enough for a CPU model.
+
+        Structured (non-streaming) generation keeps the full prompt because it
+        contains the JSON contract. Conversational replies only need the persona
+        and the core rules; the long language overlay is dropped for latency.
+        """
+        limit = 1500
+        compacted: list[dict] = []
+        for message in messages:
+            content = message.get("content")
+            if (
+                message.get("role") == "system"
+                and isinstance(content, str)
+                and len(content) > limit
+            ):
+                content = (
+                    content[:limit].rsplit("\n", 1)[0]
+                    + "\n\nKeep replies concise (1-3 sentences), in the target language."
+                    + " Never mention the underlying model, provider, or vendor."
+                )
+            compacted.append({**message, "content": content})
+        return compacted
+
+    async def _chat_primary(
         self,
         messages: list[dict],
         stream: bool = False,
@@ -785,6 +869,8 @@ class LLMAdapter:
         extra: dict = {}
         if stream:
             extra["stream_options"] = {"include_usage": True}
+            if self.provider == "ollama":
+                extra["max_tokens"] = 160
         if tools:
             extra["tools"] = [
                 {

@@ -191,7 +191,10 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         : ''
 
   return (
-    <div className="bg-fl-bg flex h-dvh overflow-hidden">
+    <div
+      className="bg-fl-bg flex h-dvh overflow-hidden"
+      style={{ paddingBottom: 'var(--cookie-banner-height, 0px)' }}
+    >
       {/* Sidebar */}
       <aside className="border-fl-border bg-fl-bg hidden w-52 shrink-0 flex-col border-r px-0 py-0 md:flex">
         {/* Logo area */}

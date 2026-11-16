@@ -98,20 +98,24 @@ export default function DashboardPage() {
 
   const loadData = useCallback(async () => {
     const sequence = ++loadSequence.current
-    const planController = new AbortController()
-    const planTimeout = setTimeout(() => planController.abort(), 12_000)
+    const requestController = new AbortController()
+    const requestTimeout = setTimeout(() => requestController.abort(), 8_000)
     try {
-      const [progRes, planRes] = await Promise.all([
-        apiFetch('/api/progress/summary'),
-        apiFetch('/api/study-plan/today', { signal: planController.signal }).catch(
-          () => null
-        ),
+      const [progResult, planResult] = await Promise.allSettled([
+        apiFetch('/api/progress/summary', { signal: requestController.signal }),
+        apiFetch('/api/study-plan/today', { signal: requestController.signal }),
       ])
       if (sequence !== loadSequence.current) return
-      const prog = progRes.ok ? await progRes.json() : null
-      const plan = planRes?.ok ? await planRes.json() : null
+      const progRes = progResult.status === 'fulfilled' ? progResult.value : null
+      const planRes = planResult.status === 'fulfilled' ? planResult.value : null
+      const prog = progRes?.ok
+        ? await progRes.json().catch(() => null)
+        : null
+      const plan = planRes?.ok
+        ? await planRes.json().catch(() => null)
+        : null
       if (sequence !== loadSequence.current) return
-      if (progRes.ok) {
+      if (progRes?.ok && prog) {
         setProgress({
           streak: prog.current_streak ?? 0,
           xp: prog.total_xp ?? 0,
@@ -171,7 +175,7 @@ export default function DashboardPage() {
     } catch {
       if (sequence === loadSequence.current) setLoadError(true)
     } finally {
-      clearTimeout(planTimeout)
+      clearTimeout(requestTimeout)
       if (sequence === loadSequence.current) setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-fetch when active language changes
