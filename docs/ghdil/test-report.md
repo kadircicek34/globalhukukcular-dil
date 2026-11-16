@@ -56,6 +56,10 @@ Ekran görüntüleri: `/root/dil/screenshots/`
 - Frontend TypeScript: 0 hata
 - ESLint: 0 hata
 - Landing Vitest: 23/23
+- Canlı LLM adapter testi (Ollama `qwen2.5:3b`): `provider=ollama`, yanıt `OK`
+- Canlı admin paneli: 0 console hatası, 0 sunucu 5xx
+- Not: panelde kullanıcı tarafından bırakılmış 1 gerçek bekleyen başvuru
+  (`kadir.cicekk@icloud.com`) korunmuştur; otomatik test verileri silinmiştir.
 
 ## Bilinen sınırlamalar
 

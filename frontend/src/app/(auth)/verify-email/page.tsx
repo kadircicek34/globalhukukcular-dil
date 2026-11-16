@@ -61,7 +61,7 @@ function VerifyEmailContent() {
       <div className="w-full max-w-sm">
         <div className="mb-10 flex flex-col items-center">
           <h1 className="text-fl-fg font-code text-xl font-bold tracking-widest uppercase">
-            FreeLingo
+            GH Dil
           </h1>
         </div>
         <div className="border-fl-border bg-fl-surface space-y-6 border p-8 text-center">

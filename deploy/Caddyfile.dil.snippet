@@ -20,8 +20,5 @@ dil.globalhukukcular.com {
 
   # Next.js uygulaması kendi CSP/COOP/COEP başlıklarını üretir.
   # WebSocket (/ws/*) yükseltmeleri Caddy tarafından otomatik iletilir.
-  reverse_proxy ghdil-frontend:3000 {
-    health_uri /
-    health_interval 30s
-  }
+  reverse_proxy ghdil-frontend:3000
 }

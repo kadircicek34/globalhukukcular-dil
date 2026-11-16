@@ -72,7 +72,7 @@ function ResetPasswordContent() {
       <div className="w-full max-w-sm">
         <div className="mb-10 flex flex-col items-center">
           <h1 className="text-fl-fg font-code text-xl font-bold tracking-widest uppercase">
-            FreeLingo
+            GH Dil
           </h1>
         </div>
 

@@ -1,6 +1,6 @@
 # GH Dil — Canlı Durum
 
-Son güncelleme: 16 Kasım 2026, 03:05
+Son güncelleme: 16 Kasım 2026, 03:20
 
 ## Tamamlanan
 
@@ -15,14 +15,16 @@ Son güncelleme: 16 Kasım 2026, 03:05
   `0600/0700` dosya izinleri, beyaz liste e-posta alan adları
 - Production: Docker Compose, Postgres 16, Redis 7, Caddy reverse proxy
 - Admin bootstrap: `kadircicek13@icloud.com` / kullanıcı `kadir` (şifre `/root/dil/admin-credentials.txt`)
-- Yerel LLM: Ollama `qwen2.5:3b`, `ghdil_internal` ağında `ghdil-ollama:11434`
+- Yerel LLM: Ollama `qwen2.5:3b`, `ghdil_internal` ağında `ghdil-ollama:11434`; adapter testi `OK` döndü
 - Testler: backend 90 passed + Ruff temiz; frontend tsc/eslint temiz; landing Vitest 23/23;
   canlı Playwright 20/20
 - DNS: `dil.globalhukukcular.com A 169.58.198.19` yayında
 - HTTPS: Let's Encrypt sertifikası alındı; canlı alan adı HTTP/2 200
 - Canlı Playwright: 20/20 (landing, başvuru, pending 403, admin onay, üye girişi, belge, cleanup)
 - Geçici nip.io test alanı kaldırıldı; yalnızca canlı `dil` bloğu kaldı
-- Test kullanıcıları silindi; veritabanında yalnızca admin var
+- Otomatik test kullanıcıları silindi; veritabanında admin (id 1) ve kullanıcının
+  panelde bıraktığı 1 gerçek bekleyen başvuru (id 9, kadir.cicekk@icloud.com) var
+- Caddy aktif health-check kaldırıldı; frontend recreate sonrası 503 giderildi
 
 ## Tamamlandı
 
@@ -30,7 +32,8 @@ Tüm kabul kriterleri kanıtlandı. Site canlı ve üyeye özel akış çalış�
 
 ## Bilinen riskler
 
-- TTS/STT servisleri yapılandırılmadı; sesli özellikler çalışmaz. Metin AI aktiftir.
+- TTS/STT servisleri yapılandırılmadı; sesli özellikler çalışmaz. Metin AI (Ollama)
+  canlı backend içinden test edildi ve `OK` yanıtı aldı.
 - `akademi.globalhukukcular.com` bu çalışmadan bağımsız 500 veriyor:
   Prisma `public.Course` tablosu yok. Kaynak dizini `/root/Gakademi-recover` altında.
 - Türkticaret paneli yetkili bilgisi değişikliği için e-posta onayı istedi; DNS kaydı
