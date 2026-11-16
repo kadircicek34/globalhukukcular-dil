@@ -99,17 +99,17 @@ const STEPS = [
   },
   {
     number: '02',
-    title: 'Yönetim onayı',
+    title: 'Hemen erişim',
     description:
-      'Belgeniz ve üyelik uygunluğunuz dernek yönetimi tarafından incelenir. Sonuç e-posta ile bildirilir.',
+      'Belgeniz dernek yönetimi tarafından incelenir; inceleme sürerken platforma hemen giriş yapabilirsiniz.',
     Icon: ShieldCheck,
-    note: 'Gizli inceleme · KVKK uyumu',
+    note: 'Açık erişim · Gizli inceleme · KVKK',
   },
   {
     number: '03',
     title: 'Kişisel program',
     description:
-      'Onayın ardından giriş yapın, seviye tespitinizi tamamlayın ve çalışma planınızı oluşturun.',
+      'Giriş yapın, seviye tespitinizi tamamlayın ve kişisel çalışma planınızı oluşturun.',
     Icon: Sparkles,
     note: 'Seviye tespiti · A1–C2 planı · Lingu',
   },
@@ -146,7 +146,7 @@ const FAQS = [
   {
     question: 'GH Dil kimlere açık?',
     answer:
-      'GH Dil, Global Hukukçular Derneği bünyesinde hukuk fakültesi öğrencileri ve hukuk mezunları için tasarlanmıştır. Platformu kullanabilmek için üyelik başvurusunun dernek yönetimi tarafından onaylanması gerekir.',
+      'GH Dil, Global Hukukçular Derneği bünyesinde hukuk fakültesi öğrencileri ve hukuk mezunları için tasarlanmıştır. Başvurunuz yönetim incelemesine alınır; inceleme sürerken platformu hemen kullanabilirsiniz. Ret durumunda erişim kapanır.',
   },
   {
     question: 'Üyelik başvurusu nasıl yapılır?',
@@ -161,12 +161,12 @@ const FAQS = [
   {
     question: 'Başvuru için ödeme yapmam gerekiyor mu?',
     answer:
-      'Üyelik başvurusu için ödeme alınmaz. Başvurunuzun onaylanmasının ardından platforma erişim koşulları ve varsa gelişmiş özellikler panel içinde açıkça gösterilir.',
+      'Üyelik başvurusu için ödeme alınmaz. Başvurunuzu gönderdikten sonra platforma erişebilirsiniz; inceleme arka planda sürer. Varsa gelişmiş özellikler panel içinde gösterilir.',
   },
   {
     question: 'Başvurum ne zaman sonuçlanır?',
     answer:
-      'Her başvuru dernek yönetimi tarafından ayrı ayrı incelenir. Sonuç, başvurunuzda belirttiğiniz e-posta adresine bildirilir. Eksik veya okunamayan belge olması hâlinde başvuru gerekçesiyle birlikte değerlendirilir.',
+      'Her başvuru dernek yönetimi tarafından ayrı ayrı incelenir. İnceleme sürerken platformu kullanabilirsiniz; sonuç e-posta ile bildirilir. Eksik veya okunamayan belge olması hâlinde başvuru gerekçesiyle birlikte değerlendirilir.',
   },
 ]
 
@@ -542,7 +542,7 @@ export default async function Home() {
               </h2>
               <p className="mt-5 max-w-xl font-sans text-sm leading-7 text-[#B9C0CC]">
                 Başvurudan ilk derse kadar süreç sade tutulur. Belge incelemesi
-                ve üyelik onayı dernek yönetimindedir.
+                dernek yönetimindedir; inceleme sürerken giriş açıktır.
               </p>
             </div>
 
@@ -597,7 +597,7 @@ export default async function Home() {
                 />
               </Link>
               <p className="font-sans text-[11px] leading-5 text-[#8FA1BC]">
-                Başvurular dernek yönetiminin onayına tabidir.
+                Başvurular dernek yönetiminin incelemesine tabidir; inceleme sürerken giriş açıktır.
               </p>
             </div>
           </div>
@@ -1203,26 +1203,10 @@ export default async function Home() {
             </div>
           </div>
 
-          <div className="mt-12 flex flex-col gap-5 border-t border-[#C9A24B]/15 pt-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="mt-12 border-t border-[#C9A24B]/15 pt-6">
             <p className="font-sans text-[11px] text-[#7F8DA3]">
               © 2026 Global Hukukçular Derneği. Tüm hakları saklıdır.
             </p>
-            <div className="flex flex-col gap-2 font-sans text-[10px] leading-5 text-[#8494ad] sm:flex-row sm:items-center sm:gap-4">
-              <a
-                href="https://github.com/artcc/freelingo"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`inline-flex items-center gap-1.5 transition-colors hover:text-[#C9A24B] ${focusRing}`}
-              >
-                AGPL-3.0 açık kaynak altyapı
-                <ExternalLink aria-hidden="true" className="size-2.5" />
-              </a>
-              <span className="hidden h-3 w-px bg-[#C9A24B]/25 sm:block" />
-              <span>
-                Bu platform, AGPL-3.0 lisanslı FreeLingo altyapısı üzerine
-                geliştirilmiştir.
-              </span>
-            </div>
           </div>
         </div>
       </footer>

@@ -47,7 +47,7 @@ Başarılı yanıt `201`:
 {
   "status": "pending",
   "application_id": 42,
-  "message": "Başvurunuz alındı. Yönetici onayından sonra giriş yapabilirsiniz."
+  "message": "Başvurunuz alındı. Üyeliğiniz incelenirken hemen giriş yapabilirsiniz."
 }
 ```
 
@@ -64,14 +64,13 @@ Başvuru oturum açmaz; access/refresh token döndürmez.
 
 `POST /api/auth/login`
 
-- `membership_status == "approved"` değilse `403`:
-  - pending: `{"detail": "Membership pending approval"}`
-  - rejected: `{"detail": "Membership application rejected"}`
+- `pending` başvuru sahibi **hemen giriş yapabilir**; üyelik incelemesi arka planda sürer.
+- Yalnızca `rejected` kullanıcı `403` alır: `{"detail": "Membership application rejected"}`.
 - `is_active == false` ise mevcut davranış: `401 Invalid credentials`
 - Onaylı üye mevcut token akışıyla giriş yapar.
 
-`POST /api/auth/refresh` ve `get_current_user` de `approved` olmayan kullanıcıyı reddeder.
-Onay bekleyen kullanıcının eski token'ı varsa `403` döner.
+`POST /api/auth/refresh` ve `get_current_user` pending kullanıcıya izin verir;
+rejected kullanıcıyı `403` ile reddeder. Admin reddi sonraki istekte erişimi kapatır.
 
 ## Admin uçları
 
@@ -145,7 +144,7 @@ Tümü `require_admin` gerektirir.
 
 - Rota: `/register` (mevcut rota korunur).
 - Form `FormData` ile `/api/auth/apply` çağırır.
-- Başarıda token yazılmaz; teşekkür/onay bekleme ekranı gösterilir.
+- Başarıda token yazılmaz; "hemen giriş yap" ekranı gösterilir.
 - Doğum tarihi, hukuk durumu, okul, e-Devlet belgesi ve KVKK olmadan submit engellenir.
 - `e-Devlet` belgesi için kabul edilen türler ve 5 MB sınırı istemcide de kontrol edilir.
 

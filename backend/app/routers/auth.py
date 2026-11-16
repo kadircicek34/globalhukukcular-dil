@@ -184,11 +184,11 @@ def _minimum_birth_date() -> date:
 
 
 def _membership_denied_detail(user: User) -> str | None:
-    if user.membership_status == "pending":
-        return "Membership pending approval"
+    # Applications stay in the admin review queue, but access is not blocked
+    # while the review is pending. A rejection revokes access.
     if user.membership_status == "rejected":
         return "Membership application rejected"
-    if user.membership_status != "approved":
+    if user.membership_status not in {"pending", "approved"}:
         return "Membership approval required"
     return None
 
@@ -344,9 +344,9 @@ async def apply_for_membership(
         status=user.membership_status,
         application_id=user.id,
         message=(
-            "Başvurunuz alındı. Yönetici onayından sonra giriş yapabilirsiniz."
+            "Başvurunuz alındı. Üyeliğiniz incelenirken hemen giriş yapabilirsiniz."
             if user.membership_status == "pending"
-            else "Yönetici hesabınız hazır. Giriş yapabilirsiniz."
+            else "Üyeliğiniz aktif. Hemen giriş yapabilirsiniz."
         ),
     )
 

@@ -1,6 +1,6 @@
 # GH Dil — Canlı Durum
 
-Son güncelleme: 16 Kasım 2026, 03:20
+Son güncelleme: 16 Kasım 2026, 03:45
 
 ## Tamamlanan
 
@@ -8,8 +8,9 @@ Son güncelleme: 16 Kasım 2026, 03:20
 - Kurumsal kimlik: yuvarlak bronz amblem, favicon, apple-touch-icon, OG görseli
 - Landing: Türkçe, lacivert/altın/krem, mobil uyumlu, 360px'de taşmasız
 - Üyelik backend'i: doğum tarihi, hukuk öğrencisi/mezunu, e-Devlet belgesi, KVKK,
-  admin onay/ret, güvenli belge saklama, migration 0061
-- Üyelik arayüzü: başvuru formu, onay bekleme ekranı, login 403 mesajları,
+  admin onay/ret, güvenli belge saklama, migration 0061. Başvurular onay
+  kuyruğunda kalır; kullanıcı inceleme sürerken hemen giriş yapabilir. Ret erişimi kapatır.
+- Üyelik arayüzü: başvuru formu, hemen giriş ekranı, reddedilen üye mesajı,
   `/admin/memberships`, bekleyen sayaç, davetli üye kaydı
 - Güvenlik: WS üyelik kapısı, belge silme, 6 MB body limiti, MIME/uzantı doğrulaması,
   `0600/0700` dosya izinleri, beyaz liste e-posta alan adları
@@ -20,10 +21,12 @@ Son güncelleme: 16 Kasım 2026, 03:20
   canlı Playwright 20/20
 - DNS: `dil.globalhukukcular.com A 169.58.198.19` yayında
 - HTTPS: Let's Encrypt sertifikası alındı; canlı alan adı HTTP/2 200
-- Canlı Playwright: 20/20 (landing, başvuru, pending 403, admin onay, üye girişi, belge, cleanup)
+- Canlı Playwright: 20/20 (landing, başvuru, pending üye hemen girişi, admin onay, üye girişi, belge, cleanup)
 - Geçici nip.io test alanı kaldırıldı; yalnızca canlı `dil` bloğu kaldı
 - Otomatik test kullanıcıları silindi; veritabanında admin (id 1) ve kullanıcının
-  panelde bıraktığı 1 gerçek bekleyen başvuru (id 9, kadir.cicekk@icloud.com) var
+  panelde bıraktığı 1 gerçek bekleyen başvuru (id 9, kadir.cicekk@icloud.com) var.
+  Bu başvuru yeni politikayla hemen giriş yapabilir; admin onay/ret verebilir.
+- Landing footer'daki açık kaynak/AGPL satırı kaldırıldı; LICENSE/NOTICE korunuyor.
 - Caddy aktif health-check kaldırıldı; frontend recreate sonrası 503 giderildi
 
 ## Tamamlandı

@@ -266,17 +266,16 @@ async def conversation_ws(
             )
             await websocket.close(code=1008)
             return
-        if user.membership_status != "approved":
+        if user.membership_status == "rejected":
             logger.warning(
-                "[conversation] User %s membership is %s — closing WS 1008",
+                "[conversation] User %s membership was rejected — closing WS 1008",
                 user_id,
-                user.membership_status,
             )
             await websocket.send_json(
                 {
                     "type": "error",
-                    "code": "membership_required",
-                    "message": "Membership approval required.",
+                    "code": "membership_rejected",
+                    "message": "Membership application rejected.",
                 }
             )
             await websocket.close(code=1008)

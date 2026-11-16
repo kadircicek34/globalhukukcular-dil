@@ -277,7 +277,7 @@ export default function RegisterPage() {
                   Başvuru alındı
                 </p>
                 <h1 className="mt-3 font-serif text-3xl leading-tight text-[#0f1e3d] sm:text-4xl">
-                  {result.status === 'approved' ? 'Yönetici hesabınız hazır' : 'Aramıza hoş geldiniz'}
+                  {result.status === 'approved' ? 'Üyeliğiniz aktif' : 'Başvurunuz alındı'}
                 </h1>
                 <p className="mt-4 max-w-lg text-sm leading-7 text-[#43506a]">
                   {result.message}
@@ -292,7 +292,7 @@ export default function RegisterPage() {
                   <div className="mt-3 flex items-center justify-between gap-4 text-sm">
                     <span className="text-[#5c6880]">Durum</span>
                     <span className="rounded-full bg-[#c9a24b]/15 px-3 py-1 text-xs font-semibold text-[#7a5a17]">
-                      {result.status === 'approved' ? 'Onaylandı' : 'Yönetici onayı bekliyor'}
+                      {result.status === 'approved' ? 'Onaylandı' : 'İnceleme devam ediyor'}
                     </span>
                   </div>
                 </div>
@@ -301,7 +301,7 @@ export default function RegisterPage() {
                     href="/login"
                     className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0f1e3d] px-7 py-3.5 text-sm font-semibold text-[#f7f3ea] transition hover:bg-[#1b3159]"
                   >
-                    Giriş ekranına dön
+                    Hemen giriş yap
                     <ArrowRight className="size-4" />
                   </Link>
                   <a
@@ -314,8 +314,8 @@ export default function RegisterPage() {
                   </a>
                 </div>
                 <p className="mt-6 text-xs leading-6 text-[#5c6880]">
-                  Onay süreci genellikle 1-2 iş günü sürer. Belgeniz yalnızca yetkili dernek
-                  yöneticileri tarafından görüntülenir.
+                  Üyeliğiniz incelenirken platformu hemen kullanabilirsiniz. Belgeniz yalnızca
+                  yetkili dernek yöneticileri tarafından görüntülenir.
                 </p>
               </div>
             </div>
@@ -403,7 +403,7 @@ export default function RegisterPage() {
               </p>
               <h2 className="mt-2 font-serif text-3xl text-[#0f1e3d]">Üyelik başvuru formu</h2>
               <p className="mt-2 text-sm leading-6 text-[#5c6880]">
-                Zorunlu alanları doldurun. Başvurunuz onaylandığında giriş bilgileriniz aktifleşir.
+                Zorunlu alanları doldurun. Başvurunuzu gönderdikten sonra hemen giriş yapabilirsiniz.
               </p>
             </div>
 

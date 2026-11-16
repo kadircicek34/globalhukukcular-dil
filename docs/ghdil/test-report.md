@@ -13,8 +13,8 @@ Canlı alan adında 20/20 test geçti:
 - Üyelik CTA'ları `/register` (6 bağlantı)
 - Mobil 390px: yatay taşma yok
 - Girişsiz `/dashboard` -> `/login`
-- Başvuru formu gönderildi (GHD-00006)
-- Onaysız üye girişi 403 + Türkçe "onay bekliyor" mesajı
+- Başvuru formu gönderildi (GHD-00010)
+- Pending üye uygulamaya hemen giriş yaptı (onay kuyruğu arka planda sürüyor)
 - Admin girişi başarılı
 - Admin bekleyen başvuruyu ve e-Devlet belgesini gördü
 - Admin nav bekleyen sayacı = 1
@@ -34,15 +34,15 @@ Ekran görüntüleri: `/root/dil/screenshots/`
 - `05-admin-memberships.png`
 - `06-admin-approved.png`
 - `07-member-dashboard.png`
-- `08-pending-login.png`
+- `08-pending-member-access.png`
 - `09-admin-dashboard.png`
 
 ## API / güvenlik
 
 - `POST /api/auth/apply` 201 pending; doğum tarihi, hukuk durumu, belge ve KVKK zorunlu
-- Pending giriş 403 `Membership pending approval`
-- Admin onayı sonrası üye girişi 200
-- `/api/auth/me` pending token ile 403
+- Pending üye girişi 200; uygulama erişimi açık
+- Admin onayı sonrası üye girişi 200; ret edilen üye 403
+- `/api/auth/me` pending token ile 200 (`membership_status=pending`)
 - Admin belge indirme 200 `application/pdf`; normal üye 403
 - Kullanıcı silindiğinde e-Devlet belgesi diskten silindi
 - Belge dizini `/root/dil/data/membership_docs`, dosya izni `0600`, dizin `0700`

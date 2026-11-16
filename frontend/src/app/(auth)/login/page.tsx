@@ -70,14 +70,9 @@ function LoginForm() {
             const field = Array.isArray(first?.loc) ? first.loc.at(-1) : null
             if (field === 'email') message = t('invalidEmail')
           }
-          if (res.status === 403) {
-            if (data?.detail === 'Membership pending approval') {
-              message =
-                'Üyelik başvurunuz yönetici onayı bekliyor. Onaylandığında giriş yapabilirsiniz.'
-            } else if (data?.detail === 'Membership application rejected') {
-              message =
-                'Üyelik başvurunuz reddedildi. Ayrıntı için Global Hukukçular Derneği ile iletişime geçin.'
-            }
+          if (res.status === 403 && data?.detail === 'Membership application rejected') {
+            message =
+              'Üyelik başvurunuz reddedildi. Ayrıntı için Global Hukukçular Derneği ile iletişime geçin.'
           }
           setError(message)
           return

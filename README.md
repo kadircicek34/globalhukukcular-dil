@@ -13,9 +13,9 @@ Global Hukukçular Derneği üyelerine açıktır.
 1. Aday, `/register` üzerinden ad soyad, e-posta, doğum tarihi, hukuk öğrencisi/mezunu
    durumu, hukuk fakültesi ve **e-Devlet öğrenci/mezun belgesi** ile başvurur.
 2. KVKK aydınlatma metni ve üyelik koşulları zorunludur.
-3. Başvuru `pending` durumunda saklanır; aday bu aşamada giriş yapamaz.
+3. Başvuru `pending` olarak yönetici inceleme kuyruğuna düşer; aday **hemen giriş yapabilir**.
 4. Dernek yöneticisi `/admin/memberships` panelinden belgeyi ve bilgileri inceler.
-5. Onaylanan üye giriş yapabilir; reddedilen üyeye ret gerekçesi gösterilir.
+5. Onay üyeliği kalıcılaştırır; ret sonraki istekte erişimi kapatır.
 
 Yüklenen e-Devlet belgeleri public dizinde tutulmaz. Belge indirme ucu yalnızca
 `admin` rolüne açıktır ve `Cache-Control: private, no-store` döner.
@@ -69,7 +69,8 @@ Dağıtım notları: `deploy/README.md`
 ## Güvenlik
 
 - Şifreler bcrypt ile hashlenir; JWT access + rotating refresh token kullanılır.
-- Üyelik onayı backend'de zorunlu tutulur; frontend yönlendirmesi tek başına yetmez.
+- Üyelik durumu backend'de kontrol edilir; reddedilen kullanıcı erişemez.
+  İnceleme bekleyen başvuru sahibi platformu kullanabilir.
 - Başvuru ve belge uçları rate limitlidir.
 - E-Devlet belgesi türü, boyutu ve dosya imzası doğrulanır.
 - `.env` ve üretim sırları repoya eklenmez.

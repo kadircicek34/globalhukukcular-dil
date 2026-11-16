@@ -113,13 +113,13 @@ async def test_apply_rejects_duplicate_email(client, tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_pending_member_cannot_login(client, admin_user, tmp_path, monkeypatch):
+async def test_pending_member_can_login_immediately(client, admin_user, tmp_path, monkeypatch):
     assert (await apply(client, tmp_path, monkeypatch)).status_code == 201
     response = await client.post(
         "/api/auth/login", json={"email": "ayse@example.com", "password": "Test1234!@"}
     )
-    assert response.status_code == 403
-    assert response.json()["detail"] == "Membership pending approval"
+    assert response.status_code == 200
+    assert response.json()["access_token"]
 
 
 @pytest.mark.asyncio
@@ -236,7 +236,7 @@ async def test_first_applicant_becomes_admin(client, db_session, tmp_path, monke
 
 
 @pytest.mark.asyncio
-async def test_pending_token_cannot_access_protected_routes(
+async def test_pending_token_can_access_protected_routes(
     client, db_session, admin_user, tmp_path, monkeypatch
 ):
     from app.core.security import create_access_token
@@ -249,7 +249,8 @@ async def test_pending_token_cannot_access_protected_routes(
     response = await client.get(
         "/api/auth/me", headers={"Authorization": f"Bearer {token}"}
     )
-    assert response.status_code == 403
+    assert response.status_code == 200
+    assert response.json()["membership_status"] == "pending"
 
 
 @pytest.mark.asyncio
