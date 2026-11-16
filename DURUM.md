@@ -1,6 +1,6 @@
 # GH Dil — Canlı Durum
 
-Son güncelleme: 16 Kasım 2026, 13:35
+Son güncelleme: 16 Kasım 2026, 14:05
 
 ## Tamamlanan
 
@@ -16,13 +16,15 @@ Son güncelleme: 16 Kasım 2026, 13:35
   `0600/0700` dosya izinleri, beyaz liste e-posta alan adları
 - Production: Docker Compose, Postgres 16, Redis 7, Caddy reverse proxy
 - Admin bootstrap: `kadircicek13@icloud.com` / kullanıcı `kadir` (şifre `/root/dil/admin-credentials.txt`)
-- LLM: OpenCode Go birincil (mevcut oturumun kimliğiyle, `opencode.ai`
-  OpenAI-uyumlu uç ve oturum başlığı); kota dolduğunda yerel Ollama
-  `qwen2.5:1.5b` yedeği devrede. Arayüzde sağlayıcı/model adı gösterilmiyor.
-- OpenCode Go kotası şu an dolu (yaklaşık 2 gün); aynı sağlayıcı kotası açılınca
-  otomatik olarak birincil model kullanılacak. Alternatif: OpenCode Go Extra Usage.
+- LLM: OpenCode Go birincil, yeni API anahtarıyla **çalışıyor** (`opencode.ai`
+  OpenAI-uyumlu uç, oturum başlığı). Yerel Ollama `qwen2.5:1.5b` yalnızca yedek.
+  Arayüzde sağlayıcı/model adı gösterilmiyor; asistan yalnızca Lingu.
+- Canlı chat: OpenCode Go ile ~6 sn, akıcı yanıt. Sağlayıcı/model adı yanıtta yok.
 - Kullanıcı isteğiyle elle oluşturduğum 48 demo ders ve seed script'i kaldırıldı;
-  plan/rota korunuyor. Ders içerikleri yeniden yalnızca LLM üretimiyle oluşturulacak.
+  plan/rota korunuyor. İlk ders (id 49) **OpenCode Go ile AI tarafından** üretildi;
+  `/api/study-plan/today` artık 147 ms'de dönüyor.
+- Yeni günlerin ders üretimi ~105 sn sürebiliyor; Next proxy 30 sn'de 500 gösterse
+  bile backend üretimi tamamlayıp kaydedebiliyor. Sayfa yenilendiğinde ders gelir.
 - Testler: backend 90 passed + Ruff temiz; frontend tsc/eslint temiz; landing Vitest 23/23;
   canlı Playwright 20/20
 - DNS: `dil.globalhukukcular.com A 169.58.198.19` yayında
@@ -33,8 +35,7 @@ Son güncelleme: 16 Kasım 2026, 13:35
   kullanıcı (id 9, kadir.cicekk@icloud.com) ve kullanıcının bıraktığı 2 gerçek
   bekleyen başvuru (id 11, id 12) var; bunlar silinmedi.
 - Dashboard `/today` ve `/progress` isteklerine 8 sn toplam istemci zaman aşımı
-  eklendi; yavaş yerel LLM ders üretimi dashboard'u süresiz kilitlemiyor.
-  Tur uygulama kabuğuna taşındı; çerez bandı içerik alanını kapatmıyor.
+  eklendi. Tur uygulama kabuğuna taşındı; çerez bandı içerik alanını kapatmıyor.
 - 22 uygulama sayfası canlıda 200; 5xx/konsol hatası yok.
 
 - Landing footer'daki açık kaynak/AGPL satırı kaldırıldı; LICENSE/NOTICE korunuyor.
@@ -51,8 +52,9 @@ Tüm kabul kriterleri kanıtlandı. Site canlı ve üyeye özel akış çalış�
   testi MP3 üretti. STT (sesli konuşma) hâlâ yapılandırılmadı.
 - Onboarding turundaki yeşil FreeLingo robotu GH Dil amblemiyle değiştirildi;
   tur artık dashboard verisi beklemeden açılıyor.
-- Yerel Ollama `qwen2.5:3b` ders üretimi CPU'da yavaş; ilk ders için 12 sn
-  dashboard zaman aşımı var. Hızlı üretim için bulut LLM önerilir.
+- Yeni ders üretimi OpenCode Go ile ~105 sn sürebiliyor; Next proxy 30 sn sınırı
+  nedeniyle ilk istek 500 görünse bile backend devam edip dersi kaydedebilir.
+  Ders listesi yenilenince görünür. Yerel yedek 1.5B yalnızca acil durum içindir.
 - `akademi.globalhukukcular.com` bu çalışmadan bağımsız 500 veriyor:
   Prisma `public.Course` tablosu yok. Kaynak dizini `/root/Gakademi-recover` altında.
 - Türkticaret paneli yetkili bilgisi değişikliği için e-posta onayı istedi; DNS kaydı

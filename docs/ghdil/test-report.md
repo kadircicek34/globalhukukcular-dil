@@ -59,7 +59,8 @@ Ekran görüntüleri: `/root/dil/screenshots/`
 - Frontend TypeScript: 0 hata
 - ESLint: 0 hata
 - Landing Vitest: 23/23
-- Canlı LLM adapter testi (Ollama `qwen2.5:3b`): `provider=ollama`, yanıt `OK`
+- Canlı LLM adapter testi (OpenCode Go birincil): yanıt `OK`
+- Canlı chat: OpenCode Go ile ~6 sn, akıcı yanıt; sağlayıcı/model adı yok
 - Canlı admin paneli: 0 console hatası, 0 sunucu 5xx
 - 22 uygulama sayfası canlıda 200 (dashboard, plan, ilerleme, kartlar, sohbet,
   dinleme, okuma, konuşma, oyunlar, seviye tespiti, kaynaklar, ayarlar, admin)
@@ -74,7 +75,7 @@ Ekran görüntüleri: `/root/dil/screenshots/`
 - Not: panelde kullanıcı başvuruları korunmuştur (id 9 onaylı; id 11 ve 12
   bekleyen). Otomatik test kullanıcıları silinmiştir.
 
-## Demo içerik notu
+## Eğitim içeriği
 
 - Elle oluşturulan 48 ders ve seed script'i kullanıcı isteğiyle silindi.
 - Plan/rota korunuyor; dersler yeniden LLM üretimiyle oluşturulacak.
@@ -84,8 +85,9 @@ Ekran görüntüleri: `/root/dil/screenshots/`
 
 - TTS: Antalya Mini yerel Türkçe + Edge TTS yedeği + tarayıcı sesi. STT (sesli
   konuşma) yapılandırılmadı.
-- Yerel Ollama `qwen2.5:3b` ders üretimi CPU'da yavaştır; dashboard 12 sn zaman
-  aşımıyla açılır. Hızlı/kaliteli üretim için bulut LLM önerilir.
+- Yeni ders üretimi OpenCode Go ile ~105 sn sürebilir; Next proxy 30 sn sınırı
+  nedeniyle ilk istek 500 görünse bile backend devam edip dersi kaydeder.
+  Ders listesi yenilendiğinde görünür.
 - `akademi.globalhukukcular.com` bu çalışmadan bağımsız olarak 500 döndürüyor:
   Prisma `public.Course` tablosu veritabanında yok. GH Dil container'ları bu servise dokunmaz.
 - `dil.globalhukukcular.com` A kaydı 169.58.198.19 olarak yayında; HTTPS 200 ve sertifika geçerli.
