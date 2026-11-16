@@ -24,8 +24,8 @@ Son güncelleme: 16 Kasım 2026, 03:45
 - Canlı Playwright: 20/20 (landing, başvuru, pending üye hemen girişi, admin onay, üye girişi, belge, cleanup)
 - Geçici nip.io test alanı kaldırıldı; yalnızca canlı `dil` bloğu kaldı
 - Otomatik test kullanıcıları silindi; veritabanında admin (id 1) ve kullanıcının
-  panelde bıraktığı 1 gerçek bekleyen başvuru (id 9, kadir.cicekk@icloud.com) var.
-  Bu başvuru yeni politikayla hemen giriş yapabilir; admin onay/ret verebilir.
+  kullanıcının bıraktığı 1 gerçek başvuru (id 9, kadir.cicekk@icloud.com) var;
+  bu başvuru panelden onaylanmış durumda.
 - Landing footer'daki açık kaynak/AGPL satırı kaldırıldı; LICENSE/NOTICE korunuyor.
 - Caddy aktif health-check kaldırıldı; frontend recreate sonrası 503 giderildi
 
