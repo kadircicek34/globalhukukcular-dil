@@ -1,6 +1,6 @@
 # GH Dil — Canlı Durum
 
-Son güncelleme: 16 Kasım 2026, 12:20
+Son güncelleme: 16 Kasım 2026, 13:10
 
 ## Tamamlanan
 
@@ -33,6 +33,9 @@ Son güncelleme: 16 Kasım 2026, 12:20
   eklendi; yavaş yerel LLM ders üretimi dashboard'u süresiz kilitlemiyor.
   Tur uygulama kabuğuna taşındı; çerez bandı içerik alanını kapatmıyor.
 - 22 uygulama sayfası canlıda 200; 5xx/konsol hatası yok.
+- Plan 1 için 48 A1 dersi ve alıştırmaları oluşturuldu. Dashboard `/today`
+  ~100 ms'de dönüyor; mobil/masaüstünde "BAŞLA" ile `/lesson/1` açıldı,
+  cevap gönderildi ve "Doğru!" geri bildirimi alındı.
 - Landing footer'daki açık kaynak/AGPL satırı kaldırıldı; LICENSE/NOTICE korunuyor.
 - Caddy aktif health-check kaldırıldı; frontend recreate sonrası 503 giderildi
 

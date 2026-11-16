@@ -41,6 +41,16 @@ Yüklenen e-Devlet belgeleri public dizinde tutulmaz. Belge indirme ucu yalnızc
 Frontend, LLM/TTS/STT sağlayıcılarına doğrudan erişmez; tüm sağlayıcı çağrıları
 backend üzerinden yapılır.
 
+## Demo ders içeriği
+
+Plan hazır olduğu halde dersler yoksa, mevcut planın tüm günleri için
+deterministik A1 içeriği üretilebilir:
+
+```bash
+docker exec -e PYTHONPATH=/app ghdil-backend \
+  python scripts/seed_plan_lessons.py --plan-id 1
+```
+
 ## Yerel geliştirme
 
 ```bash
