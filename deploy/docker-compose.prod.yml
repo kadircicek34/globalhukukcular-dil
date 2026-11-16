@@ -45,6 +45,21 @@ services:
     networks:
       - internal
 
+  antalia:
+    build:
+      context: ./antalia
+      dockerfile: Dockerfile
+    image: ghdil-antalia:latest
+    container_name: ghdil-antalia
+    restart: unless-stopped
+    volumes:
+      - /root/antalia/antalia-mini:/models/antalia-mini:ro
+    environment:
+      - ANTALIA_MODEL=/models/antalia-mini
+      - ANTALIA_SAMPLE_RATE=24000
+    networks:
+      - internal
+
   backend:
     build:
       context: ../backend
@@ -91,6 +106,9 @@ services:
       TTS_PROVIDER: ${TTS_PROVIDER}
       TTS_BASE_URL: ${TTS_BASE_URL}
       TTS_VOICE: ${TTS_VOICE}
+      ANTALIA_TTS_URL: ${ANTALIA_TTS_URL}
+      ANTALIA_TTS_SPEED: ${ANTALIA_TTS_SPEED}
+      EDGE_TTS_VOICE: ${EDGE_TTS_VOICE}
       STT_PROVIDER: ${STT_PROVIDER}
       STT_BASE_URL: ${STT_BASE_URL}
       STT_MODEL: ${STT_MODEL}

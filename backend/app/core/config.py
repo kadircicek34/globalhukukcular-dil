@@ -31,9 +31,12 @@ class Settings(BaseSettings):
     ANTHROPIC_MAX_TOKENS: int = 8192
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_MODEL: str = "deepseek-chat"
-    TTS_PROVIDER: Literal["local", "openai", "gemini"] = "local"
+    TTS_PROVIDER: Literal["local", "openai", "gemini", "antalia", "edge"] = "local"
     TTS_BASE_URL: str = "http://kokoro:8880"
     TTS_VOICE: str = "af_heart"
+    ANTALIA_TTS_URL: str = "http://antalia:8099"
+    ANTALIA_TTS_SPEED: float = 1.0
+    EDGE_TTS_VOICE: str = "tr-TR-EmelNeural"
     OPENAI_TTS_MODEL: str = "tts-1"
     OPENAI_TTS_VOICE: str = "nova"
     OPENAI_TTS_SPEED: float = 1.0

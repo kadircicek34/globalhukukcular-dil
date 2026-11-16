@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/page-loading-boundary'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { AuthAvatarImage } from '@/components/AuthAvatarImage'
+import OnboardingTour from '@/components/tour/OnboardingTour'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -659,6 +660,8 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       </main>
 
       <LoadingBar />
+
+      <OnboardingTour />
 
       <ContactFormModal
         open={contactOpen}

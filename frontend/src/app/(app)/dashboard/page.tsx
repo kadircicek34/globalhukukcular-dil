@@ -12,7 +12,6 @@ import { useProgressStore } from '@/store/progress'
 import { useLanguageStore } from '@/store/language'
 import { useConfigStore } from '@/store/config'
 import { useTrialStatus } from '@/hooks/useTrialStatus'
-import OnboardingTour from '@/components/tour/OnboardingTour'
 import WhatsNew from '@/components/whats-new/WhatsNew'
 import { PageLoading } from '@/components/ui/page-loading'
 import { SubscriptionPlanButtons } from '@/components/billing/SubscriptionPlanButtons'
@@ -99,14 +98,18 @@ export default function DashboardPage() {
 
   const loadData = useCallback(async () => {
     const sequence = ++loadSequence.current
+    const planController = new AbortController()
+    const planTimeout = setTimeout(() => planController.abort(), 12_000)
     try {
       const [progRes, planRes] = await Promise.all([
         apiFetch('/api/progress/summary'),
-        apiFetch('/api/study-plan/today'),
+        apiFetch('/api/study-plan/today', { signal: planController.signal }).catch(
+          () => null
+        ),
       ])
       if (sequence !== loadSequence.current) return
       const prog = progRes.ok ? await progRes.json() : null
-      const plan = planRes.ok ? await planRes.json() : null
+      const plan = planRes?.ok ? await planRes.json() : null
       if (sequence !== loadSequence.current) return
       if (progRes.ok) {
         setProgress({
@@ -135,7 +138,7 @@ export default function DashboardPage() {
         setVocabularyTotal(0)
         setVocabularyProgress(0)
       }
-      if (planRes.ok) {
+      if (planRes?.ok && plan) {
         setCefrLevel(plan.cefr_level ?? null)
         setPlanId(plan.plan_id ?? null)
         setCompletion(plan.completion ?? null)
@@ -168,6 +171,7 @@ export default function DashboardPage() {
     } catch {
       if (sequence === loadSequence.current) setLoadError(true)
     } finally {
+      clearTimeout(planTimeout)
       if (sequence === loadSequence.current) setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-fetch when active language changes
@@ -256,7 +260,6 @@ export default function DashboardPage() {
 
   return (
     <>
-      <OnboardingTour />
       <WhatsNew />
       <TrialExpiredNotice />
       <div

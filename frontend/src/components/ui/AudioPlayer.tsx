@@ -61,6 +61,9 @@ export function AudioPlayer({
   ])
 
   const releaseAudio = useCallback(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+    }
     if (audioRef.current) {
       audioRef.current.onended = null
       audioRef.current.onerror = null
@@ -129,12 +132,42 @@ export function AudioPlayer({
     const analyticsSession = useAuthStore.getState().sessionVersion
     const analyticsPath = window.location.pathname
     controllerRef.current = controller
+    let failed = false
     const timeoutId = setTimeout(() => {
       controller.abort()
       showError()
     }, timeoutMs)
     timeoutRef.current = timeoutId
-    let failed = false
+
+    // Last-resort fallback: if the backend TTS chain and Edge TTS are both
+    // unavailable, let the device read the same text with its native voice.
+    const playBrowserFallback = () => {
+      if (
+        typeof window === 'undefined' ||
+        !('speechSynthesis' in window) ||
+        !text.trim()
+      )
+        return false
+      try {
+        window.speechSynthesis.cancel()
+        const utterance = new SpeechSynthesisUtterance(text)
+        utterance.lang = document.documentElement.lang || 'tr-TR'
+        utterance.rate = 1
+        utterance.onend = () => {
+          if (controllerRef.current === controller) setState('idle')
+        }
+        utterance.onerror = () => {
+          if (controllerRef.current === controller) setState('error')
+        }
+        window.speechSynthesis.speak(utterance)
+        clearTimeout(timeoutId)
+        setState('playing')
+        return true
+      } catch {
+        return false
+      }
+    }
+
     const showError = () => {
       if (
         failed ||
@@ -145,6 +178,10 @@ export function AudioPlayer({
       failed = true
       clearTimeout(timeoutId)
       releaseAudio()
+      if (playBrowserFallback()) {
+        ttsLogger.warn('TTS backend unavailable; using browser speech synthesis')
+        return
+      }
       setState('error')
       recoveryRef.current = setTimeout(() => {
         if (controllerRef.current !== controller) return

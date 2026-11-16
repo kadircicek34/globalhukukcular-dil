@@ -35,7 +35,7 @@ Yüklenen e-Devlet belgeleri public dizinde tutulmaz. Belge indirme ucu yalnızc
 - `backend/` — FastAPI, SQLAlchemy async, Alembic, Pydantic v2
 - PostgreSQL 16 + Redis 7
 - LLM: Ollama (yerel), OpenAI, Anthropic veya DeepSeek
-- Ses: Kokoro/OpenAI/Gemini TTS, faster-whisper/OpenAI STT
+- Ses: Antalya Mini (yerel Türkçe TTS) → Edge TTS → tarayıcı sesi; STT için faster-whisper/OpenAI
 - Üretim: Docker Compose + Caddy reverse proxy
 
 Frontend, LLM/TTS/STT sağlayıcılarına doğrudan erişmez; tüm sağlayıcı çağrıları

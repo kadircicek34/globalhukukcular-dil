@@ -1,6 +1,6 @@
 # GH Dil — Canlı Durum
 
-Son güncelleme: 16 Kasım 2026, 03:45
+Son güncelleme: 16 Kasım 2026, 11:10
 
 ## Tamamlanan
 
@@ -23,9 +23,11 @@ Son güncelleme: 16 Kasım 2026, 03:45
 - HTTPS: Let's Encrypt sertifikası alındı; canlı alan adı HTTP/2 200
 - Canlı Playwright: 20/20 (landing, başvuru, pending üye hemen girişi, admin onay, üye girişi, belge, cleanup)
 - Geçici nip.io test alanı kaldırıldı; yalnızca canlı `dil` bloğu kaldı
-- Otomatik test kullanıcıları silindi; veritabanında admin (id 1) ve kullanıcının
-  kullanıcının bıraktığı 1 gerçek başvuru (id 9, kadir.cicekk@icloud.com) var;
-  bu başvuru panelden onaylanmış durumda.
+- Otomatik test kullanıcıları silindi. Veritabanında admin (id 1), onaylı
+  kullanıcı (id 9, kadir.cicekk@icloud.com) ve kullanıcının bıraktığı 2 gerçek
+  bekleyen başvuru (id 11, id 12) var; bunlar silinmedi.
+- Dashboard `/today` isteğine 12 sn istemci zaman aşımı eklendi; yavaş yerel
+  LLM ders üretimi dashboard'u süresiz kilitlemiyor. Tur uygulama kabuğuna taşındı.
 - Landing footer'daki açık kaynak/AGPL satırı kaldırıldı; LICENSE/NOTICE korunuyor.
 - Caddy aktif health-check kaldırıldı; frontend recreate sonrası 503 giderildi
 
@@ -35,8 +37,13 @@ Tüm kabul kriterleri kanıtlandı. Site canlı ve üyeye özel akış çalış�
 
 ## Bilinen riskler
 
-- TTS/STT servisleri yapılandırılmadı; sesli özellikler çalışmaz. Metin AI (Ollama)
-  canlı backend içinden test edildi ve `OK` yanıtı aldı.
+- TTS zinciri: Antalya Mini (yerel Türkçe, WAV) → Edge TTS (MP3) → tarayıcı
+  `speechSynthesis`. Canlı tur sesi 200 `audio/wav` döndü; Edge İngilizce fallback
+  testi MP3 üretti. STT (sesli konuşma) hâlâ yapılandırılmadı.
+- Onboarding turundaki yeşil FreeLingo robotu GH Dil amblemiyle değiştirildi;
+  tur artık dashboard verisi beklemeden açılıyor.
+- Yerel Ollama `qwen2.5:3b` ders üretimi CPU'da yavaş; ilk ders için 12 sn
+  dashboard zaman aşımı var. Hızlı üretim için bulut LLM önerilir.
 - `akademi.globalhukukcular.com` bu çalışmadan bağımsız 500 veriyor:
   Prisma `public.Course` tablosu yok. Kaynak dizini `/root/Gakademi-recover` altında.
 - Türkticaret paneli yetkili bilgisi değişikliği için e-posta onayı istedi; DNS kaydı

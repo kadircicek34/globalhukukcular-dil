@@ -56,7 +56,13 @@ from app.routers import config as config_router
 from app.routers import health as health_router
 from app.services.gemini_tts_service import GeminiTTSService
 from app.services.stt_service import OpenAISTTService, WhisperSTTService
-from app.services.tts_service import KokoroTTSService, OpenAITTSService
+from app.services.tts_service import (
+    AntaliaTTSService,
+    EdgeTTSService,
+    FallbackTTSService,
+    KokoroTTSService,
+    OpenAITTSService,
+)
 
 
 def _run_migrations() -> None:
@@ -102,6 +108,15 @@ async def lifespan(app: FastAPI):  # noqa: ANN201
             male_voice=settings.GEMINI_TTS_MALE_VOICE,
             timeout=settings.GEMINI_TTS_TIMEOUT_SECONDS,
         )
+    elif settings.TTS_PROVIDER == "antalia":
+        app.state.tts_service = FallbackTTSService(
+            [
+                AntaliaTTSService(settings.ANTALIA_TTS_URL, settings.ANTALIA_TTS_SPEED),
+                EdgeTTSService(settings.EDGE_TTS_VOICE),
+            ]
+        )
+    elif settings.TTS_PROVIDER == "edge":
+        app.state.tts_service = EdgeTTSService(settings.EDGE_TTS_VOICE)
     else:
         app.state.tts_service = KokoroTTSService(settings.TTS_BASE_URL, settings.TTS_VOICE)
 

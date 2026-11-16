@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useId, useRef } from 'react'
+import Image from 'next/image'
 import { useLocale, useTranslations } from 'next-intl'
 import {
   ArrowLeft,
@@ -16,22 +17,19 @@ import {
   Shuffle,
   Sparkles,
 } from 'lucide-react'
-import LinguAvatar, {
-  type LinguAnimation,
-} from '@/components/lingu/LinguAvatar'
 import { AudioPlayer, type PlayerState } from '@/components/ui/AudioPlayer'
 import { TOUR_STORAGE_KEY } from '@/lib/onboarding-tour'
 import { useConfigStore } from '@/store/config'
 import { trackBrowserEvent } from '@/lib/analytics'
 
 const STEPS = [
-  { id: 'step1', icon: Sparkles, gesture: 'saludo' },
+  { id: 'step1', icon: Sparkles },
   { id: 'step2', icon: BookOpen },
   { id: 'step3', icon: MessageSquare, premium: true },
   { id: 'step4', icon: Layers },
   { id: 'step5', icon: Headphones, premium: true },
-  { id: 'step6', icon: Gamepad2, gesture: 'animando' },
-  { id: 'step7', icon: Check, gesture: 'celebracion' },
+  { id: 'step6', icon: Gamepad2 },
+  { id: 'step7', icon: Check },
 ] as const
 
 export default function OnboardingTour() {
@@ -44,9 +42,7 @@ export default function OnboardingTour() {
   const analyticsEnabled = useConfigStore((s) => s.analyticsEnabled)
   const tourRecorded = useRef(false)
   const [step, setStep] = useState(0)
-  const [animation, setAnimation] = useState<LinguAnimation>('saludo')
   const [audioState, setAudioState] = useState<PlayerState>('idle')
-  const visited = useRef(new Set([0]))
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const titleId = useId()
@@ -96,22 +92,10 @@ export default function OnboardingTour() {
 
   const onAudioState = useCallback((state: PlayerState) => {
     setAudioState(state)
-    setAnimation((current) =>
-      state === 'playing'
-        ? 'hablando'
-        : current === 'hablando'
-          ? 'reposo'
-          : current
-    )
   }, [])
-  const onGestureFinished = useCallback(() => setAnimation('reposo'), [])
 
   function goTo(next: number) {
     if (next < 0 || next >= STEPS.length) return
-    const destination = STEPS[next]
-    const gesture = 'gesture' in destination ? destination.gesture : 'reposo'
-    setAnimation(visited.current.has(next) ? 'reposo' : gesture)
-    visited.current.add(next)
     setAudioState('idle')
     setStep(next)
   }
@@ -177,7 +161,25 @@ export default function OnboardingTour() {
         </div>
 
         <div className="grid items-center gap-3 px-6 py-5 md:min-h-[390px] md:grid-cols-[240px_1fr] md:gap-8 md:px-8 md:py-8">
-          <LinguAvatar animation={animation} onFinished={onGestureFinished} />
+          <div className="flex items-center justify-center">
+            <div className="relative flex aspect-square w-48 items-center justify-center sm:w-56">
+              <span
+                aria-hidden="true"
+                className="absolute inset-0 rounded-full border border-[#C9A24B]/30"
+              />
+              <span
+                aria-hidden="true"
+                className="absolute inset-[8%] rounded-full border border-dashed border-[#C9A24B]/25"
+              />
+              <Image
+                src="/ghdil-logo.png"
+                alt="GH Dil amblemi"
+                width={192}
+                height={192}
+                className="relative z-10 h-36 w-36 rounded-full ring-1 ring-[#C9A24B]/50 sm:h-44 sm:w-44"
+              />
+            </div>
+          </div>
           <div className="min-w-0 space-y-4">
             <p className="text-fl-accent flex items-center gap-2 text-xs font-semibold tracking-widest uppercase">
               <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />

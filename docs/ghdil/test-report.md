@@ -36,6 +36,9 @@ Ekran görüntüleri: `/root/dil/screenshots/`
 - `07-member-dashboard.png`
 - `08-pending-member-access.png`
 - `09-admin-dashboard.png`
+- `14-tour-tts-step4.png`
+- `17-tour-fixed-final.png`
+- `18-dashboard-after-timeout.png`
 
 ## API / güvenlik
 
@@ -51,20 +54,27 @@ Ekran görüntüleri: `/root/dil/screenshots/`
 
 ## Otomatik testler
 
-- Backend: 90 test geçti (`test_membership`, `test_auth`, `test_admin`)
+- Backend: 93 test geçti (üyelik/auth/admin + TTS fallback/tour testleri)
 - Ruff: temiz
 - Frontend TypeScript: 0 hata
 - ESLint: 0 hata
 - Landing Vitest: 23/23
 - Canlı LLM adapter testi (Ollama `qwen2.5:3b`): `provider=ollama`, yanıt `OK`
 - Canlı admin paneli: 0 console hatası, 0 sunucu 5xx
-- Not: panelde kullanıcı tarafından bırakılmış 1 gerçek başvuru
-  (`kadir.cicekk@icloud.com`, id 9) onaylanmış olarak korunmuştur; otomatik test
-  verileri silinmiştir.
+- Canlı TTS: `/api/tts/tour/tr/step4` -> 200 `audio/wav` (Antalya Mini)
+- Edge TTS fallback: İngilizce metin -> 200 `audio/mpeg` (Antalya Türkçe-only
+  olduğu için otomatik Edge'e düştü)
+- Tur ekranı: GH Dil amblemi, "Sesli anlatımı dinle" butonu, ses hatası yok
+- Dashboard: yavaş `/today` isteği 12 sn sonra bırakılıyor; tur ve panel açılıyor
+- Not: panelde kullanıcı başvuruları korunmuştur (id 9 onaylı; id 11 ve 12
+  bekleyen). Otomatik test kullanıcıları silinmiştir.
 
 ## Bilinen sınırlamalar
 
-- TTS/STT yerel servisleri bu sunucuda çalıştırılmadı; metin tabanlı AI (Ollama `qwen2.5:3b`) aktiftir.
+- TTS: Antalya Mini yerel Türkçe + Edge TTS yedeği + tarayıcı sesi. STT (sesli
+  konuşma) yapılandırılmadı.
+- Yerel Ollama `qwen2.5:3b` ders üretimi CPU'da yavaştır; dashboard 12 sn zaman
+  aşımıyla açılır. Hızlı/kaliteli üretim için bulut LLM önerilir.
 - `akademi.globalhukukcular.com` bu çalışmadan bağımsız olarak 500 döndürüyor:
   Prisma `public.Course` tablosu veritabanında yok. GH Dil container'ları bu servise dokunmaz.
 - `dil.globalhukukcular.com` A kaydı 169.58.198.19 olarak yayında; HTTPS 200 ve sertifika geçerli.

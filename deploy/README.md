@@ -37,6 +37,18 @@ docker exec gakademi-caddy-1 caddy reload --config /etc/caddy/Caddyfile
 
 `dil.globalhukukcular.com` A kaydı: `169.58.198.19` (Türkticaret DNS paneli).
 
+## Ses (TTS)
+
+GH Dil ses zinciri:
+
+1. **Antalya Mini** — yerel Türkçe TTS sidecar'ı (`ghdil-antalia:8099`, CPU, WAV).
+2. **Edge TTS** — Antalya erişilemezse veya metin Türkçe değilse ücretsiz MP3.
+3. **Tarayıcı `speechSynthesis`** — iki sunucu tarafı da başarısızsa cihaz sesi.
+
+Antalya modeli host'ta `/root/antalia/antalia-mini` altında durur ve salt-okunur
+olarak `antalia` konteynerine bağlanır. Sidecar imajı `deploy/antalia/Dockerfile`
+ile build edilir. Model farklı bir sunucudaysa volume yolunu güncelleyin.
+
 ## Yerel LLM (Ollama)
 
 Compose, Ollama'yı `ghdil-ollama` servisi olarak `ghdil_internal` ağında çalıştırır.
